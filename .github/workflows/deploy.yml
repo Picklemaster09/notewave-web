@@ -19,7 +19,10 @@ jobs:
           node-version: 20
           cache: npm
 
-      - run: npm ci
+      # npm install (not ci) so the lockfile reconciles after the firebase
+      # dependency removal. Switch back to `npm ci` once the lockfile is
+      # regenerated and committed on a machine with clean npm access.
+      - run: npm install --no-audit --no-fund
 
       - name: Build frontend
         run: npm run build

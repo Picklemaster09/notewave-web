@@ -317,7 +317,7 @@ export default function App() {
     }
   };
 
-  // Push current local notes to the backend in one batch (used by FirebaseSyncPanel replacement)
+  // Push current local notes to the backend in one batch
   const syncNotesToCloud = async () => {
     if (!isAuthenticated || !notes.length) return;
     await saveNotesBatch(notes);

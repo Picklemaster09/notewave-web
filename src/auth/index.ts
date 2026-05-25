@@ -1,4 +1,4 @@
-import { useAuth0 } from "@auth0/auth0-react";
+import { useAuth0, RedirectLoginOptions } from "@auth0/auth0-react";
 
 export { Auth0Provider } from "@auth0/auth0-react";
 
@@ -26,7 +26,9 @@ export function useAuth() {
     getAccessTokenSilently,
   } = useAuth0();
 
-  const login = () => loginWithRedirect();
+  // Optionally forward Auth0 options, e.g. a specific social connection or a
+  // signup hint, so the landing page can drive Google vs. email sign-up.
+  const login = (options?: RedirectLoginOptions) => loginWithRedirect(options);
 
   const signOut = () =>
     logout({ logoutParams: { returnTo: window.location.origin } });

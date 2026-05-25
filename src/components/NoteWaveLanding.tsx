@@ -1,16 +1,6 @@
 import { useState, useRef, FormEvent, useEffect } from "react";
-import { 
-  auth, 
-  googleProvider, 
-  signInWithPopup, 
-  isFirebaseEnabled 
-} from "../firebase";
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  updateProfile 
-} from "firebase/auth";
-import { 
+import { useAuth } from "../auth";
+import {
   Sparkles, Mail, Lock, User, Smartphone, Play, Pause, 
   Check, Layers, Cpu, Database, ChevronRight, AlertCircle, 
   ArrowRight, ShieldCheck, FileText, Bell, ListTodo, Key, 
@@ -24,17 +14,13 @@ interface NoteWaveLandingProps {
 }
 
 export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "en" }: NoteWaveLandingProps) {
-  // Auth Form State
+  // Auth0 hosted login. The SPA never handles raw passwords — it redirects to
+  // Auth0's Universal Login page, which handles Google + email/password signup.
+  const { login } = useAuth();
+
+  // Which tab is highlighted on the auth card (cosmetic — controls the CTA).
   const [authTab, setAuthTab] = useState<"signin" | "register">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
-  
-  // States for handling UI feedback
-  const [isLoading, setIsLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
   // Real voice recording on landing page (Guest Sandbox)
   const [customDemoNote, setCustomDemoNote] = useState<any>(null);
@@ -269,93 +255,22 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
     }
   };
 
-  // Handle Classic Email & Password register/sign-in
-  const handleClassicAuthSubmit = async (e: FormEvent) => {
+  // Redirect to Auth0 Universal Login. screen_hint=signup opens the sign-up
+  // form; omitting it shows the sign-in form. The user picks email/password
+  // there, so no credentials are ever entered on this page.
+  const handleEmailAuth = (e: FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    if (!isFirebaseEnabled || !auth) {
-      setErrorMsg("Firebase services are offline at the moment. Please configure a production database project to utilize user registrations.");
-      return;
-    }
-
-    if (!email || !password) {
-      setErrorMsg("Please provide both dynamic email address credentials and security password parameters.");
-      return;
-    }
-
-    if (authTab === "register" && !displayName) {
-      setErrorMsg("Please define an Inventor profile name to personalize your NoteWave workspace.");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      if (authTab === "signin") {
-        // Authenticate existing user
-        await signInWithEmailAndPassword(auth, email, password);
-        setSuccessMsg("Success! Access granted to cloud workspace...");
-      } else {
-        // Register new user
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        if (userCredential.user) {
-          await updateProfile(userCredential.user, {
-            displayName: displayName
-          });
-        }
-        setSuccessMsg("Account customized successfully! Synchronizing database...");
-      }
-    } catch (e: any) {
-      console.error("Authentication failed:", e);
-      let localizedError = e?.message || "Verify your internet parameters and try again.";
-      
-      // Parse user-friendly error messages
-      if (e?.code === "auth/email-already-in-use") {
-        localizedError = "This email is already associated with an inventory team member. Try Signing In instead.";
-      } else if (e?.code === "auth/weak-password") {
-        localizedError = "Security password is too vulnerable. Ensure it has at least 6 characters.";
-      } else if (e?.code === "auth/invalid-email") {
-        localizedError = "Email format does not match general address rules. Check for typos.";
-      } else if (e?.code === "auth/user-not-found" || e?.code === "auth/wrong-password" || e?.code === "auth/invalid-credential") {
-        localizedError = "Incorrect secure login identity or password combination. Try again.";
-      }
-      setErrorMsg(localizedError);
-    } finally {
-      setIsLoading(false);
-    }
+    setIsRedirecting(true);
+    login({
+      authorizationParams:
+        authTab === "register" ? { screen_hint: "signup" } : {},
+    });
   };
 
-  // Google Sign-In wrapper
-  const handleGoogleSignIn = async () => {
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    if (!isFirebaseEnabled) {
-      setErrorMsg("Firebase Cloud services are currently offline. Please deploy credentials first.");
-      return;
-    }
-
-    setIsGoogleLoading(true);
-
-    try {
-      await signInWithPopup(auth, googleProvider);
-      setSuccessMsg("Google sync successfully authorized. Redirecting...");
-    } catch (e: any) {
-      console.error("Google login rejected:", e);
-      if (e?.code === "auth/popup-closed-by-user") {
-        setErrorMsg(
-          "Popup panel closed pre-negotiation. If previewing inside restricted sandbox containers, click the 'Open in new tab' button at the top header of your browser to enable active authentication."
-        );
-      } else if (e?.code === "auth/popup-blocked") {
-        setErrorMsg("The Google Authentication iframe popup was blocked. Update your browser permissions or open in a new tab.");
-      } else {
-        setErrorMsg(e?.message || "Google Cloud sync authorization failed. Verify network connectivity.");
-      }
-    } finally {
-      setIsGoogleLoading(false);
-    }
+  // Send the user straight to Google via Auth0's google-oauth2 connection.
+  const handleGoogleSignIn = () => {
+    setIsRedirecting(true);
+    login({ authorizationParams: { connection: "google-oauth2" } });
   };
 
   return (
@@ -384,7 +299,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
 
         {/* Global info banner */}
         <div className="hidden md:flex items-center gap-2 bg-white/70 backdrop-blur-xs px-3.5 py-1.5 rounded-full border border-[#E5E5EA] text-[11px] font-bold text-gray-500">
-          <Database className="w-3.5 h-3.5 text-blue-600" /> Secure Firebase Cloud Sandbox Ready
+          <Database className="w-3.5 h-3.5 text-blue-600" /> Secure Cloud Sync Ready
         </div>
       </header>
 
@@ -681,7 +596,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
             {/* Google Authentication quick launch */}
             <button
               type="button"
-              disabled={isGoogleLoading || isLoading}
+              disabled={isRedirecting}
               onClick={handleGoogleSignIn}
               className="w-full flex items-center justify-center gap-2.5 px-4 py-3 rounded-xl border border-[#D1D1D6] bg-[#F9F9F9] hover:bg-white text-xs font-bold text-gray-700 transition-all shadow-3xs active:scale-98 cursor-pointer disabled:opacity-50"
             >
@@ -703,7 +618,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
                 />
               </svg>
-              {isGoogleLoading ? "Authorizing Google..." : "Continue with Google Sync"}
+              {isRedirecting ? "Redirecting to secure login..." : "Continue with Google"}
             </button>
 
             {/* Separator line */}
@@ -716,7 +631,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
             {/* Action Segmented tab picker */}
             <div className="grid grid-cols-2 p-1 bg-[#F2F2F7] rounded-xl border border-[#D1D1D6] text-xs font-bold leading-none font-sans">
               <button
-                onClick={() => { setAuthTab("signin"); setErrorMsg(null); }}
+                onClick={() => setAuthTab("signin")}
                 className={`py-2 rounded-lg text-[11px] font-sans font-extrabold tracking-tight transition-all cursor-pointer ${
                   authTab === "signin"
                     ? "bg-white text-blue-600 border border-[#D1D1D6]/85 shadow-3xs"
@@ -726,7 +641,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
                 Sign In
               </button>
               <button
-                onClick={() => { setAuthTab("register"); setErrorMsg(null); }}
+                onClick={() => setAuthTab("register")}
                 className={`py-2 rounded-lg text-[11px] font-sans font-extrabold tracking-tight transition-all cursor-pointer ${
                   authTab === "register"
                     ? "bg-white text-blue-600 border border-[#D1D1D6]/85 shadow-3xs"
@@ -737,92 +652,30 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
               </button>
             </div>
 
-            {/* Message Alert Boxes */}
-            {errorMsg && (
-              <div className="p-3 bg-red-50 border border-red-200 text-red-800 rounded-xl text-[11px] leading-relaxed flex items-start gap-2 animate-fade-in font-semibold">
-                <AlertCircle className="w-4 h-4 text-red-650 mt-0.5 shrink-0" />
-                <span>{errorMsg}</span>
-              </div>
-            )}
-
-            {successMsg && (
-              <div className="p-3 bg-green-50 border border-green-200 text-green-800 rounded-xl text-[11px] leading-relaxed flex items-start gap-2 animate-fade-in font-semibold">
-                <ShieldCheck className="w-4 h-4 text-green-600 mt-0.5 shrink-0" />
-                <span>{successMsg}</span>
-              </div>
-            )}
-
-            {/* Classic Form Inputs */}
-            <form onSubmit={handleClassicAuthSubmit} className="flex flex-col gap-3 font-sans">
-              
-              {authTab === "register" && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-mono font-bold text-gray-450 uppercase tracking-widest flex items-center gap-1.5">
-                    <User className="w-3.5 h-3.5 text-blue-600" /> Inventor Nickname
-                  </label>
-                  <input
-                    type="text"
-                    disabled={isLoading || isGoogleLoading}
-                    placeholder="e.g. Marie Curie"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full bg-[#F9F9F9] text-xs px-3 py-2.5 rounded-xl border border-[#D1D1D6] focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-semibold"
-                  />
-                </div>
-              )}
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-mono font-bold text-gray-455 uppercase tracking-widest flex items-center gap-1.5">
-                  <Mail className="w-3.5 h-3.5 text-blue-600" /> Email Identity Address
-                </label>
-                <input
-                  type="email"
-                  disabled={isLoading || isGoogleLoading}
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[#F9F9F9] text-xs px-3 py-2.5 rounded-xl border border-[#D1D1D6] focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-semibold"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-mono font-bold text-gray-455 uppercase tracking-widest flex items-center gap-1.5 justify-between">
-                  <span className="flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-blue-600" /> Account Security Key
-                  </span>
-                </label>
-                <input
-                  type="password"
-                  disabled={isLoading || isGoogleLoading}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#F9F9F9] text-xs px-3 py-2.5 rounded-xl border border-[#D1D1D6] focus:bg-white focus:outline-none focus:border-blue-500 transition-all font-semibold"
-                />
-              </div>
-
-              {/* Submit Button */}
+            {/* Email/password is handled on Auth0's secure hosted page. */}
+            <form onSubmit={handleEmailAuth} className="flex flex-col gap-3 font-sans">
               <button
                 type="submit"
-                disabled={isLoading || isGoogleLoading}
-                className="w-full mt-2 text-xs font-bold py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                disabled={isRedirecting}
+                className="w-full mt-1 text-xs font-bold py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
               >
-                {isLoading ? (
-                  "Verifying parameters..."
+                {isRedirecting ? (
+                  "Redirecting to secure login..."
                 ) : (
                   <>
-                    <span>{authTab === "signin" ? "Sign In Securely" : "Assemble Free Account"}</span>
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>{authTab === "signin" ? "Continue with Email" : "Create Account with Email"}</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
             </form>
 
-            {/* Instruction footnote on console integration, if self-deployed */}
+            {/* Reassurance footnote */}
             <div className="p-3 bg-blue-50/50 border border-blue-105 rounded-xl text-[9px] text-gray-500 leading-normal flex items-start gap-1.5 font-semibold font-sans">
-              <Compass className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
+              <Lock className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
               <div>
-                <strong>Self-Deployment Note:</strong> If launching your custom Firebase configuration keys, please ensure "Email/Password" and "Google" providers are turned on inside your Firebase Authentication panel.
+                <strong>Secure sign-in:</strong> You'll be redirected to our protected login page to enter your details. NoteWave never sees or stores your password.
               </div>
             </div>
           </div>

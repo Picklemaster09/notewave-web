@@ -1,0 +1,96 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User subscription tier metadata and keychain credentials configuration.",
+      "type": "object",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "Unique authenticated Firebase UID representing the account owner."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user."
+        },
+        "tier": {
+          "type": "string",
+          "enum": ["free", "premium"],
+          "description": "Simulation service tier tier limits configuration."
+        },
+        "customApiKey": {
+          "type": "string",
+          "description": "Optional personal Gemini credential string cached client-side."
+        },
+        "language": {
+          "type": "string",
+          "description": "The user's preferred application locale state."
+        }
+      },
+      "required": ["userId", "email", "tier"]
+    },
+    "Recording": {
+      "title": "Recording",
+      "description": "Verbatim transcript, summary action items, and voice note audio metadata.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique recording sequence identifier."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Owner userId matching path context."
+        },
+        "title": {
+          "type": "string",
+          "description": "Shorthand topic generated headline."
+        },
+        "duration": {
+          "type": "number",
+          "description": "Duration of voice recording in seconds."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO timestamp for database ordering."
+        },
+        "transcript": {
+          "type": "string",
+          "description": "Complete transcribe textual word-by-word playback feed."
+        },
+        "ideaSummary": {
+          "type": "string",
+          "description": "Gemini-synthesized primary idea outlines."
+        },
+        "actionItems": {
+          "type": "string",
+          "description": "Task checkbox markdown checklist outline."
+        },
+        "tags": {
+          "type": "array",
+          "description": "Short category keyword taxonomy labels."
+        },
+        "modelUsed": {
+          "type": "string",
+          "description": "The exact model tag executing analysis."
+        },
+        "audioData": {
+          "type": "string",
+          "description": "Base64 base-encoded raw voice recording string for direct browser playback audio node."
+        }
+      },
+      "required": ["id", "userId", "title", "duration", "createdAt", "transcript", "ideaSummary", "actionItems", "tags", "modelUsed", "audioData"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Isolated individual user accounts profile records."
+    },
+    "/users/{userId}/recordings/{recordingId}": {
+      "schema": "Recording",
+      "description": "Users individual voice recorded outline notes."
+    }
+  }
+}

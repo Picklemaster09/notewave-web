@@ -1,0 +1,10 @@
+{
+  "name": "NoteWave",
+  "description": "Secure, responsive vocal dictation and brainstorm outline dashboard powered by Gemini. Captures, transcribes, and synthesizes speech into structure action checklists safely.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

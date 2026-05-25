@@ -1,7 +1,21 @@
 import { initializeApp, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import firebaseConfig from "../firebase-applet-config.json";
+
+// Firebase is optional legacy sync. Config comes from build-time env vars
+// (VITE_FIREBASE_*). When unset, the placeholder values below keep the app in
+// "Secure Offline" localStorage mode — and, crucially, let the bundle build in
+// CI where no secret config file exists. Primary auth is Auth0, not Firebase.
+const firebaseConfig = {
+  apiKey: (import.meta.env.VITE_FIREBASE_API_KEY as string) ?? "placeholder-api-key",
+  projectId: (import.meta.env.VITE_FIREBASE_PROJECT_ID as string) ?? "placeholder-project",
+  appId: (import.meta.env.VITE_FIREBASE_APP_ID as string) ?? "",
+  authDomain: (import.meta.env.VITE_FIREBASE_AUTH_DOMAIN as string) ?? "",
+  firestoreDatabaseId: (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) ?? "(default)",
+  storageBucket: (import.meta.env.VITE_FIREBASE_STORAGE_BUCKET as string) ?? "",
+  messagingSenderId: (import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID as string) ?? "",
+  measurementId: (import.meta.env.VITE_FIREBASE_MEASUREMENT_ID as string) ?? "",
+};
 
 let db: any = null;
 let auth: any = null;

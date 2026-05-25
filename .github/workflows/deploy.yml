@@ -36,31 +36,3 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist
           enable_jekyll: false
-
-  # ── Backend → AWS Lambda ─────────────────────────────────────────────────────
-  deploy-backend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - run: npm ci
-
-      - name: Build Lambda bundle
-        run: npm run build:lambda
-
-      - name: Zip Lambda bundle
-        run: zip -j dist/lambda.zip dist/lambda.cjs dist/lambda.cjs.map 2>/dev/null || zip -j dist/lambda.zip dist/lambda.cjs
-
-      - name: Deploy to Lambda
-        uses: appleboy/lambda-action@v0.2.0
-        with:
-          aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws_region: ${{ secrets.AWS_REGION }}
-          function_name: ${{ secrets.LAMBDA_FUNCTION_NAME }}
-          zip_file: dist/lambda.zip

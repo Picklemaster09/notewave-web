@@ -322,7 +322,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
       </header>
 
       {/* Main Body Grid */}
-      <main className="max-w-[1400px] mx-auto w-full px-6 lg:px-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start py-10 lg:py-16 z-10 relative">
+      <main className="max-w-[1600px] mx-auto w-full px-6 lg:px-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start py-10 lg:py-14 z-10 relative">
         
         {/* LEFT COLUMN: App Pitch, Live Demo, Mobile Companions */}
         <div className="lg:col-span-7 flex flex-col gap-6">
@@ -565,41 +565,10 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
             </div>
           </div>
 
-          {/* Download mobile app companion block, as explicitly requested by user */}
-          <div className="p-4 rounded-2xl bg-white border border-[#E5E5EA] flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center shrink-0 border border-indigo-100 shadow-3xs">
-                <Smartphone className="w-5 h-5 text-indigo-600" />
-              </div>
-              <div>
-                <h4 className="text-xs font-black text-[#1C1C1E]">
-                  NoteWave in your pocket
-                </h4>
-                <p className="text-[10px] text-gray-500 mt-0.5 font-semibold">
-                  iOS &amp; Android coming soon — capture ideas the second they strike, even offline.
-                </p>
-              </div>
-            </div>
-
-            {/* Simulated App Store/Google Play Badges */}
-            <div className="flex items-center gap-2 self-stretch md:self-auto justify-center md:justify-end">
-              <div className="cursor-not-allowed flex-1 md:flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1C1E] text-white border border-gray-750 font-sans shadow-xs transition-opacity hover:opacity-90">
-                <div className="text-[8px] leading-none font-sans font-bold text-gray-400">
-                  Coming on <span className="text-white text-[10px] block font-extrabold mt-0.5">App Store</span>
-                </div>
-              </div>
-              <div className="cursor-not-allowed flex-1 md:flex-none flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111111] text-white border border-gray-750 font-sans shadow-xs transition-opacity hover:opacity-90">
-                <div className="text-[8px] leading-none font-sans font-bold text-gray-400">
-                  Soon for <span className="text-white text-[10px] block font-extrabold mt-0.5">Google Play</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
 
-        {/* RIGHT COLUMN: Auth card (Auth0 Universal Login) */}
-        <div className="lg:col-span-5 w-full flex flex-col gap-4 lg:max-w-md lg:ml-auto lg:sticky lg:top-8">
+        {/* RIGHT COLUMN: Auth card (Auth0 Universal Login) + app download */}
+        <div className="lg:col-span-5 w-full flex flex-col gap-4">
           
           <div className="bg-white rounded-2xl border border-[#E5E5EA] shadow-lg p-6 flex flex-col gap-5 relative z-2">
             
@@ -716,6 +685,37 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
               You'll be redirected to Auth0's secure hosted login. Email, password,
               and social sign-in are handled there — no credentials touch this page.
             </p>
+          </div>
+
+          {/* App download companion block (sits under the auth card) */}
+          <div className="p-4 rounded-2xl bg-white border border-[#E5E5EA] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-650 flex items-center justify-center shrink-0 border border-indigo-100 shadow-3xs">
+                <Smartphone className="w-5 h-5 text-indigo-600" />
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-[#1C1C1E]">
+                  NoteWave in your pocket
+                </h4>
+                <p className="text-[10px] text-gray-500 mt-0.5 font-semibold">
+                  iOS &amp; Android coming soon — even offline.
+                </p>
+              </div>
+            </div>
+
+            {/* Simulated App Store / Google Play badges */}
+            <div className="flex items-center gap-2 self-stretch sm:self-auto justify-center sm:justify-end">
+              <div className="cursor-not-allowed flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1C1C1E] text-white border border-gray-750 font-sans shadow-xs transition-opacity hover:opacity-90">
+                <div className="text-[8px] leading-none font-sans font-bold text-gray-400">
+                  Coming on <span className="text-white text-[10px] block font-extrabold mt-0.5">App Store</span>
+                </div>
+              </div>
+              <div className="cursor-not-allowed flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#111111] text-white border border-gray-750 font-sans shadow-xs transition-opacity hover:opacity-90">
+                <div className="text-[8px] leading-none font-sans font-bold text-gray-400">
+                  Soon for <span className="text-white text-[10px] block font-extrabold mt-0.5">Google Play</span>
+                </div>
+              </div>
+            </div>
           </div>
 
         </div>

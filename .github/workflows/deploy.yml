@@ -21,6 +21,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Enables Pages and switches the source to "GitHub Actions" if it isn't already.
+      - uses: actions/configure-pages@v5
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20

@@ -304,7 +304,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
       <div className="absolute bottom-20 right-1/4 w-96 h-96 bg-indigo-300 opacity-20 blur-3xl rounded-full pointer-events-none" />
 
       {/* Header Bar */}
-      <header className="max-w-7xl mx-auto w-full px-5 py-4 flex items-center justify-between z-10 relative mt-3">
+      <header className="max-w-[1400px] mx-auto w-full px-6 lg:px-10 py-4 flex items-center justify-between z-10 relative mt-3">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-200">
             ~
@@ -322,7 +322,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
       </header>
 
       {/* Main Body Grid */}
-      <main className="max-w-7xl mx-auto w-full px-5 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center py-6 z-10 relative">
+      <main className="max-w-[1400px] mx-auto w-full px-6 lg:px-10 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14 items-start py-10 lg:py-16 z-10 relative">
         
         {/* LEFT COLUMN: App Pitch, Live Demo, Mobile Companions */}
         <div className="lg:col-span-7 flex flex-col gap-6">
@@ -598,8 +598,8 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
 
         </div>
 
-        {/* RIGHT COLUMN: Classic Authentication Form (Tabs: Sign In / Create Account with direct Auth0 integration) */}
-        <div className="lg:col-span-5 w-full flex flex-col gap-4">
+        {/* RIGHT COLUMN: Auth card (Auth0 Universal Login) */}
+        <div className="lg:col-span-5 w-full flex flex-col gap-4 lg:max-w-md lg:ml-auto lg:sticky lg:top-8">
           
           <div className="bg-white rounded-2xl border border-[#E5E5EA] shadow-lg p-6 flex flex-col gap-5 relative z-2">
             

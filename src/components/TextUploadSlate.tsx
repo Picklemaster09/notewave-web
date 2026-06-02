@@ -3,6 +3,7 @@ import { UploadCloud, FileText, Sparkles, AlertCircle, Loader2, Clipboard } from
 import { RecordingNote, UserTier } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { apiUrl } from "../config";
+import { getAuthHeaders } from "../supabase";
 
 interface TextUploadSlateProps {
   onUploadComplete: (note: RecordingNote) => void;
@@ -43,6 +44,7 @@ export default function TextUploadSlate({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(await getAuthHeaders()),
         },
         body: JSON.stringify({
           text: textToProcess,

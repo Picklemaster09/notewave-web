@@ -20,6 +20,7 @@ import {
 import { SettingsConfig, RecordingNote } from "../types";
 import { LANGUAGE_OPTIONS } from "../locale";
 import { apiUrl } from "../config";
+import { getAuthHeaders } from "../supabase";
 
 interface SettingsPanelProps {
   settings: SettingsConfig;
@@ -141,7 +142,9 @@ export default function SettingsPanel({
     const fetchUsage = async () => {
       setIsLoadingUsage(true);
       try {
-        const response = await fetch(apiUrl(`/api/usage?tier=${settings.tier}`));
+        const response = await fetch(apiUrl(`/api/usage?tier=${settings.tier}`), {
+          headers: { ...(await getAuthHeaders()) },
+        });
         if (response.ok && active) {
           const data = await response.json();
           setUsage({ limit: data.limit, remaining: data.remaining });

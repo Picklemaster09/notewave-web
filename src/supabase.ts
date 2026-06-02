@@ -19,7 +19,7 @@ export const isSupabaseEnabled = true;
  * backend can identify the user. Falls back to any token on a legacy session
  * object for backwards compatibility.
  */
-async function getAuthHeaders(): Promise<Record<string, string>> {
+export async function getAuthHeaders(): Promise<Record<string, string>> {
   const token = await getAccessToken();
   if (token) {
     return { Authorization: `Bearer ${token}` };

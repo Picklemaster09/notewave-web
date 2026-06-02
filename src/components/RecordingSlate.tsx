@@ -5,6 +5,7 @@ import { RecordingNote, UserTier } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { getTranslation } from "../locale";
 import { apiUrl } from "../config";
+import { getAuthHeaders } from "../supabase";
 
 interface RecordingSlateProps {
   onRecordingComplete: (note: RecordingNote) => void;
@@ -145,6 +146,7 @@ export default function RecordingSlate({
             method: "POST",
             headers: {
               "Content-Type": "application/json",
+              ...(await getAuthHeaders()),
             },
             body: JSON.stringify({
               audio: base64Data,

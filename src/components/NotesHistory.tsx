@@ -8,6 +8,7 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { getTranslation } from "../locale";
 import { apiUrl } from "../config";
+import { getAuthHeaders } from "../supabase";
 
 interface MarkdownViewerProps {
   content: string;
@@ -620,6 +621,7 @@ export default function NotesHistory({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...(await getAuthHeaders()),
         },
         body: JSON.stringify({
           text: newNoteBody.trim(),

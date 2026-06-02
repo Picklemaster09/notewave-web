@@ -5,6 +5,9 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
+    // Served from https://<user>.github.io/notewave-web/ (GitHub project Pages).
+    // For a custom domain served at the root, change this to '/'.
+    base: '/notewave-web/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {

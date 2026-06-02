@@ -210,7 +210,7 @@ export default function App() {
   const handleSignOut = () => {
     registerTokenGetter(null);
     handleUserChange(null);
-    logout({ logoutParams: { returnTo: window.location.origin } });
+    logout({ logoutParams: { returnTo: window.location.origin + import.meta.env.BASE_URL } });
   };
 
   // Bridge the Auth0 session into the app's existing user model so the rest of

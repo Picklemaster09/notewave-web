@@ -15,7 +15,9 @@ const tree = auth0Domain && auth0ClientId ? (
     domain={auth0Domain}
     clientId={auth0ClientId}
     authorizationParams={{
-      redirect_uri: window.location.origin,
+      // Include the Vite base path so the redirect lands on the deployed app
+      // (e.g. https://user.github.io/notewave-web/), not the domain root.
+      redirect_uri: window.location.origin + import.meta.env.BASE_URL,
       ...(auth0Audience ? {audience: auth0Audience} : {}),
     }}
     cacheLocation="localstorage"

@@ -17,26 +17,51 @@ export function apiUrl(path: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// Two-host setup (optional).
+// Landing vs app split.
 //
-// When VITE_APP_URL points to a SEPARATE origin (e.g. https://app.example.com),
-// the landing/demo lives on the current root origin and the signed-in dashboard
-// lives on the app origin. Sign-in redirects the user to the app origin.
+// Default (VITE_APP_URL empty): same-origin PATH mode. The landing/demo lives at
+// the site root and the signed-in dashboard lives under "/app" — works on GitHub
+// Pages (paired with the 404.html SPA fallback emitted by the build).
 //
-// When VITE_APP_URL is empty (or equals the current origin), everything runs as
-// a single page: the landing shows when logged out, the dashboard when logged in.
+// Set VITE_APP_URL to a SEPARATE origin (e.g. https://app.example.com) to switch
+// to SUBDOMAIN mode: landing on the root domain, dashboard on the app subdomain.
+// Either way, login always resolves on the app location so the (per-origin)
+// Auth0 session is created where the dashboard runs.
 // ---------------------------------------------------------------------------
 export const APP_URL = (import.meta.env.VITE_APP_URL ?? "").replace(/\/+$/, "");
 
-const appOrigin = (() => {
-  try {
-    return APP_URL ? new URL(APP_URL).origin : "";
-  } catch {
-    return "";
-  }
-})();
+const base = import.meta.env.BASE_URL; // e.g. "/" or "/notewave-web/"
+const origin = typeof window !== "undefined" ? window.location.origin : "";
+const appPath = `${base.replace(/\/$/, "")}/app`;
 
-/** True when a separate app origin is configured and we're currently NOT on it
- * (i.e. we're on the landing/root host). */
-export const isLandingHost =
-  !!appOrigin && typeof window !== "undefined" && window.location.origin !== appOrigin;
+let appHref: string;
+let onLanding: boolean;
+
+if (APP_URL) {
+  let appUrlOrigin = "";
+  try {
+    appUrlOrigin = new URL(APP_URL).origin;
+  } catch {
+    /* ignore malformed URL */
+  }
+  appHref = APP_URL;
+  if (appUrlOrigin && appUrlOrigin !== origin) {
+    // Subdomain mode: the app lives on another origin, so this is the landing.
+    onLanding = true;
+  } else {
+    // A same-origin URL was given — treat it as a path target.
+    const here = origin ? window.location.href.replace(/\/+$/, "") : "";
+    onLanding = !here.startsWith(APP_URL);
+  }
+} else {
+  // Default path mode on the current origin: app lives under "/app".
+  appHref = origin + appPath;
+  onLanding = typeof window === "undefined" ? false : !window.location.pathname.startsWith(appPath);
+}
+
+/** Absolute URL where the signed-in app lives. */
+export const APP_HREF = appHref;
+/** Absolute URL of the public landing page. */
+export const LANDING_HREF = origin + base;
+/** True when the current page should render the landing/demo (not the app). */
+export const isLandingHost = onLanding;

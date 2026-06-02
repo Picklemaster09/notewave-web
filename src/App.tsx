@@ -21,7 +21,7 @@ import { Mic, Settings as SettingsIcon, History, Key, Check, HelpCircle, Layers,
 import { getTranslation, LANGUAGE_OPTIONS } from "./locale";
 import { useAuth0 } from "@auth0/auth0-react";
 import { registerTokenGetter } from "./authToken";
-import { APP_URL, isLandingHost } from "./config";
+import { APP_HREF, LANDING_HREF, isLandingHost } from "./config";
 
 
 const LOCAL_STORAGE_NOTES_KEY = "notewave_local_notes";
@@ -211,7 +211,7 @@ export default function App() {
   const handleSignOut = () => {
     registerTokenGetter(null);
     handleUserChange(null);
-    logout({ logoutParams: { returnTo: window.location.origin + import.meta.env.BASE_URL } });
+    logout({ logoutParams: { returnTo: LANDING_HREF } });
   };
 
   // Bridge the Auth0 session into the app's existing user model so the rest of
@@ -590,7 +590,7 @@ export default function App() {
   // already-authenticated visitor is moved straight to the app.
   if (isLandingHost) {
     if (isAuthenticated) {
-      window.location.href = APP_URL;
+      window.location.href = APP_HREF;
       return null;
     }
     return (
@@ -616,15 +616,9 @@ export default function App() {
   }
 
   if (!isAuthenticated) {
-    return (
-      <NoteWaveLanding
-        onLogin={handleLogin}
-        onLanguageChange={(lang) => {
-          handleSaveSettings({ ...settings, language: lang });
-        }}
-        currentLanguage={settings.language}
-      />
-    );
+    // On the app view but not signed in — send them to the public landing to sign in.
+    window.location.href = LANDING_HREF;
+    return null;
   }
 
   return (

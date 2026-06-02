@@ -19,6 +19,8 @@ import TasksWorkspace from "./components/TasksWorkspace";
 import AIAgentWorkspace from "./components/AIAgentWorkspace";
 import { Mic, Settings as SettingsIcon, History, Key, Check, HelpCircle, Layers, Cpu, Cloud, Database, Sparkles, Globe, LogOut, User, FileText, Upload, ListTodo } from "lucide-react";
 import { getTranslation, LANGUAGE_OPTIONS } from "./locale";
+import { useAuth0 } from "@auth0/auth0-react";
+import { registerTokenGetter } from "./authToken";
 
 
 const LOCAL_STORAGE_NOTES_KEY = "notewave_local_notes";
@@ -93,6 +95,14 @@ export default function App() {
 
   const [notes, setNotes] = useState<RecordingNote[]>([]);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const {
+    isAuthenticated,
+    isLoading: authLoading,
+    user: auth0User,
+    loginWithRedirect,
+    logout,
+    getAccessTokenSilently,
+  } = useAuth0();
   const [localProfileName, setLocalProfileName] = useState(() => {
     return localStorage.getItem("settings_display_name") || "";
   });
@@ -174,22 +184,6 @@ export default function App() {
     localStorage.setItem("settings_avatar_img", imgBase64);
   };
 
-  // Restore user session on startup
-  useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem("notewave_user_session");
-      if (savedUser) {
-        const parsed = JSON.parse(savedUser);
-        setCurrentUser(parsed);
-        if (parsed.displayName) {
-          setLocalProfileName(parsed.displayName);
-        }
-      }
-    } catch (e) {
-      console.error("User session restore failed:", e);
-    }
-  }, []);
-
   const handleUserChange = (user: any) => {
     setCurrentUser(user);
     if (user) {
@@ -201,6 +195,46 @@ export default function App() {
       localStorage.removeItem("notewave_user_session");
     }
   };
+
+  // Kick off Auth0 Universal Login (redirect). `signup` shows the sign-up screen;
+  // `connection` jumps straight to a social provider (e.g. "google-oauth2").
+  const handleLogin = (opts?: { signup?: boolean; connection?: string }) => {
+    loginWithRedirect({
+      authorizationParams: {
+        ...(opts?.signup ? { screen_hint: "signup" } : {}),
+        ...(opts?.connection ? { connection: opts.connection } : {}),
+      },
+    });
+  };
+
+  const handleSignOut = () => {
+    registerTokenGetter(null);
+    handleUserChange(null);
+    logout({ logoutParams: { returnTo: window.location.origin } });
+  };
+
+  // Bridge the Auth0 session into the app's existing user model so the rest of
+  // the dashboard (notes/settings sync keyed by uid) keeps working unchanged.
+  useEffect(() => {
+    if (isAuthenticated && auth0User) {
+      registerTokenGetter(() => getAccessTokenSilently());
+      handleUserChange({
+        uid: auth0User.sub,
+        id: auth0User.sub,
+        email: auth0User.email,
+        displayName:
+          auth0User.name ||
+          auth0User.nickname ||
+          (auth0User.email ? auth0User.email.split("@")[0] : "") ||
+          "NoteWave Inventor",
+        tier: settings.tier || "free",
+      });
+      if (auth0User.picture && !localStorage.getItem("settings_avatar_img")) {
+        setAvatarImg(auth0User.picture);
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isAuthenticated, auth0User]);
   
   // Physical Bezel Mapped Triggers State
   const [triggerRecord, setTriggerRecord] = useState(false);
@@ -550,22 +584,21 @@ export default function App() {
 
   const t = getTranslation(settings.language || "en");
 
-  if (!currentUser) {
+  if (authLoading || (isAuthenticated && !currentUser)) {
     return (
-      <NoteWaveLanding 
-        onAuthSuccess={(user, initialSettings) => {
-          handleUserChange(user);
-          if (initialSettings) {
-            setSettings({
-              customApiKey: initialSettings.custom_api_key || "",
-              tier: user.tier || "free",
-              actionButtonAction: initialSettings.action_button_action || "record",
-              language: initialSettings.language || settings.language,
-              theme: initialSettings.theme || settings.theme,
-              accentColor: initialSettings.accent_color || settings.accentColor,
-            });
-          }
-        }}
+      <div className="min-h-screen flex items-center justify-center bg-[#F2F2F7] text-gray-500 font-sans text-sm">
+        <div className="flex items-center gap-3">
+          <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          Securing your session…
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <NoteWaveLanding
+        onLogin={handleLogin}
         onLanguageChange={(lang) => {
           handleSaveSettings({ ...settings, language: lang });
         }}
@@ -608,7 +641,7 @@ export default function App() {
                 </div>
                 <button
                   id="sign-out-dashboard-btn"
-                  onClick={() => handleUserChange(null)}
+                  onClick={handleSignOut}
                   className="p-2 rounded-xl bg-gray-50 hover:bg-red-50 hover:text-red-650 text-gray-500 border border-[#D1D1D6] hover:border-red-200 transition-all cursor-pointer animate-fade-in"
                   title="Sign Out of Dashboard"
                 >

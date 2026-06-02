@@ -2,6 +2,7 @@ import { useState, useRef, DragEvent, FormEvent } from "react";
 import { UploadCloud, FileText, Sparkles, AlertCircle, Loader2, Clipboard } from "lucide-react";
 import { RecordingNote, UserTier } from "../types";
 import { motion, AnimatePresence } from "motion/react";
+import { apiUrl } from "../config";
 
 interface TextUploadSlateProps {
   onUploadComplete: (note: RecordingNote) => void;
@@ -38,7 +39,7 @@ export default function TextUploadSlate({
     const estimatedDuration = Math.max(5, Math.ceil((wordCount / 140) * 60));
 
     try {
-      const response = await fetch("/api/analyze-text", {
+      const response = await fetch(apiUrl("/api/analyze-text"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

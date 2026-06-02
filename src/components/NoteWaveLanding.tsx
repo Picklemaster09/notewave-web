@@ -1,24 +1,20 @@
-import { useState, useRef, FormEvent, useEffect } from "react";
-import { 
-  supabaseLogin, 
-  supabaseRegister, 
-  isSupabaseEnabled 
-} from "../supabase";
-import { 
+import { useState, useRef, useEffect } from "react";
+import {
   Sparkles, Mail, Lock, User, Smartphone, Play, Pause, 
   Check, Layers, Cpu, Database, ChevronRight, AlertCircle, 
   ArrowRight, ShieldCheck, FileText, Bell, ListTodo, Key, 
   Settings as SettingsIcon, Compass, Share2, Clock, Loader2
 } from "lucide-react";
 import { RecordingNote } from "../types";
+import { apiUrl } from "../config";
 
 interface NoteWaveLandingProps {
   onLanguageChange?: (lang: string) => void;
   currentLanguage?: string;
-  onAuthSuccess?: (user: any, initialSettings?: any) => void;
+  onLogin?: (opts?: { signup?: boolean; connection?: string }) => void;
 }
 
-export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "en", onAuthSuccess }: NoteWaveLandingProps) {
+export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "en", onLogin }: NoteWaveLandingProps) {
   // Auth Form State
   const [authTab, setAuthTab] = useState<"signin" | "register">("signin");
   const [email, setEmail] = useState("");
@@ -159,7 +155,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
         const base64Data = reader.result as string;
 
         try {
-          const response = await fetch("/api/transcribe", {
+          const response = await fetch(apiUrl("/api/transcribe"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -294,131 +290,10 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
     }
   };
 
-  // Handle Classic Email & Password register/sign-in using Auth0 Embedded token/signup APIs
-  const handleClassicAuthSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-
-    if (!email || !password) {
-      setErrorMsg("Please provide both dynamic email address credentials and security password parameters.");
-      return;
-    }
-
-    if (authTab === "register" && !displayName) {
-      setErrorMsg("Please define an Inventor profile name to personalize your NoteWave workspace.");
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      if (authTab === "signin") {
-        // Authenticate existing user via Auth0 Embedded Server-side endpoint
-        const response = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || data.error || "Authentication failed via Auth0.");
-        }
-
-        setSuccessMsg("Success! Access granted to Auth0 secured workspace...");
-        if (onAuthSuccess) {
-          onAuthSuccess(data.user, data.settings);
-        }
-      } else {
-        // Register new user via Auth0 Embedded Server-side database connection signup endpoint
-        const response = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, displayName })
-        });
-
-        const data = await response.json();
-        if (!response.ok) {
-          throw new Error(data.message || data.error || "Register failed via Auth0.");
-        }
-
-        setSuccessMsg("Auth0 account created customized successfully! Dynamic access granted...");
-        if (onAuthSuccess) {
-          onAuthSuccess(data.user, data.settings);
-        }
-      }
-    } catch (e: any) {
-      console.error("Authentication failed:", e);
-      setErrorMsg(e?.message || "Auth0 Connection Error: Ensure password grant and database connection settings are activated in the Auth0 console Client Settings.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Removable temporary shortcut to auto-register/login directly against Supabase bypassing external Auth0 roadblocks
-  const handleSandboxBypassLogin = async () => {
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    setIsLoading(true);
-
-    try {
-      const uniqueSuffix = Math.floor(Math.random() * 1000000);
-      const tempEmail = `sandbox.explorer.${uniqueSuffix}@notewave.com`;
-      const tempPassword = `SandboxSecure123!`;
-      const tempName = `Sandbox Explorer #${uniqueSuffix}`;
-
-      // Call register directly
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: tempEmail,
-          password: tempPassword,
-          displayName: tempName
-        })
-      });
-
-      const data = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || data.error || "Failed to auto-register sandbox user.");
-      }
-
-      setSuccessMsg("⚡ Sandbox database account registered & signed in successfully!");
-      if (onAuthSuccess) {
-        onAuthSuccess(data.user, data.settings);
-      }
-    } catch (e: any) {
-      console.error("Sandbox login bypass error:", e);
-      setErrorMsg(e?.message || "Could not spin up temporary sandbox profile in Supabase.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Trigger Auth0 social sign-in or universal login redirection
-  const handleAuth0SocialSignIn = async (connectionName?: string) => {
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    setIsLoading(true);
-
-    try {
-      let endpoint = "/api/auth/auth0-url";
-      if (connectionName) {
-        endpoint += `?connection=${encodeURIComponent(connectionName)}`;
-      }
-      const response = await fetch(endpoint);
-      if (!response.ok) {
-        const errData = await response.json();
-        throw new Error(errData.error || "Failed to start Auth0 session.");
-      }
-      const { url } = await response.json();
-      window.location.href = url;
-    } catch (e: any) {
-      console.error("Auth0 initiation error:", e);
-      setErrorMsg(e?.message || "Verify your connection or Auth0 credentials configuration.");
-      setIsLoading(false);
-    }
+  // Email/password and social sign-in are handled on Auth0's hosted Universal
+  // Login page (PKCE, no secret in the browser). These just kick off the redirect.
+  const handleAuth0SocialSignIn = (connectionName?: string) => {
+    onLogin?.({ connection: connectionName });
   };
 
   return (
@@ -801,7 +676,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
             {/* Separator line */}
             <div className="flex items-center gap-2.5 my-0.5">
               <div className="h-px bg-[#E5E5EA] flex-1" />
-              <span className="text-[9px] font-mono text-gray-400 font-bold uppercase">Or use secure credentials</span>
+              <span className="text-[9px] font-mono text-gray-400 font-bold uppercase">Or continue with email</span>
               <div className="h-px bg-[#E5E5EA] flex-1" />
             </div>
 
@@ -820,92 +695,19 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
               </div>
             )}
 
-            {/* Classic Form Inputs */}
-            <form onSubmit={handleClassicAuthSubmit} className="flex flex-col gap-3 font-sans">
-              
-              {authTab === "register" && (
-                <div className="flex flex-col gap-1">
-                  <label className="text-[10px] font-mono font-bold text-gray-450 uppercase tracking-widest flex items-center gap-1.5 font-sans">
-                    <User className="w-3.5 h-3.5 text-indigo-600" /> Nickname
-                  </label>
-                  <input
-                    type="text"
-                    disabled={isLoading}
-                    placeholder="e.g. Marie Curie"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full bg-[#F9F9F9] text-xs px-3 py-2.5 rounded-xl border border-[#D1D1D6] focus:bg-white focus:outline-none focus:border-indigo-500 transition-all font-semibold"
-                  />
-                </div>
-              )}
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-mono font-bold text-gray-455 uppercase tracking-widest flex items-center gap-1.5 font-sans">
-                  <Mail className="w-3.5 h-3.5 text-indigo-600" /> Email
-                </label>
-                <input
-                  type="email"
-                  disabled={isLoading}
-                  placeholder="name@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full bg-[#F9F9F9] text-xs px-3 py-2.5 rounded-xl border border-[#D1D1D6] focus:bg-white focus:outline-none focus:border-indigo-500 transition-all font-semibold"
-                />
-              </div>
-
-              <div className="flex flex-col gap-1">
-                <label className="text-[10px] font-mono font-bold text-gray-455 uppercase tracking-widest flex items-center gap-1.5 justify-between font-sans">
-                  <span className="flex items-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-indigo-600" /> Password
-                  </span>
-                </label>
-                <input
-                  type="password"
-                  disabled={isLoading}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full bg-[#F9F9F9] text-xs px-3 py-2.5 rounded-xl border border-[#D1D1D6] focus:bg-white focus:outline-none focus:border-indigo-500 transition-all font-semibold"
-                />
-              </div>
-
-              {/* Submit Button */}
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="w-full mt-2 text-xs font-bold py-3 px-4 rounded-xl bg-[#4F46E5] hover:bg-indigo-700 text-white transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-              >
-                {isLoading ? (
-                  "Verifying parameters..."
-                ) : (
-                  <>
-                    <span>{authTab === "signin" ? "Sign In" : "Register"}</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </>
-                )}
-              </button>
-            </form>
-
-            {/* --- TEMPORARY SANDBOX BYPASS PANEL (EASY TO REMOVE LATER) --- */}
-            <div className="mt-4 pt-4 border-t border-[#E5E5EA] flex flex-col gap-2 p-3.5 rounded-xl bg-amber-50/50 border border-amber-200/60 font-sans">
-              <div className="flex items-center gap-1.5 text-amber-800">
-                <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse shrink-0" />
-                <span className="text-[10px] font-black uppercase tracking-wider font-mono">🧪 Sandbox Developer Bypass</span>
-              </div>
-              <p className="text-[10px] text-gray-550 leading-normal font-semibold font-sans">
-                Skip verification / third-party config. Create and log into a clean sandbox account directly in the Supabase database.
-              </p>
-              <button
-                type="button"
-                onClick={handleSandboxBypassLogin}
-                disabled={isLoading}
-                className="w-full mt-1.5 text-[10.5px] font-black py-2.5 px-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white shadow-3xs border border-amber-700 active:scale-97 transition-all cursor-pointer flex items-center justify-center gap-2"
-              >
-                <Sparkles className="w-3.5 h-3.5 text-amber-200 animate-pulse" />
-                <span>Quick Auto-Register & Sign In</span>
-              </button>
-            </div>
-            {/* ------------------------------------------------------------- */}
+            {/* Primary Auth0 Universal Login action (hosted, secure, PKCE) */}
+            <button
+              type="button"
+              onClick={() => onLogin?.({ signup: authTab === "register" })}
+              className="w-full mt-1 text-xs font-bold py-3 px-4 rounded-xl bg-[#4F46E5] hover:bg-indigo-700 text-white transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <span>{authTab === "signin" ? "Sign In" : "Create Account"} securely</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+            <p className="text-[10px] text-gray-400 text-center font-semibold leading-normal">
+              You'll be redirected to Auth0's secure hosted login. Email, password,
+              and social sign-in are handled there — no credentials touch this page.
+            </p>
           </div>
 
         </div>

@@ -4,6 +4,7 @@ import WaveformVisualizer from "./WaveformVisualizer";
 import { RecordingNote, UserTier } from "../types";
 import { motion, AnimatePresence } from "motion/react";
 import { getTranslation } from "../locale";
+import { apiUrl } from "../config";
 
 interface RecordingSlateProps {
   onRecordingComplete: (note: RecordingNote) => void;
@@ -140,7 +141,7 @@ export default function RecordingSlate({
         const base64Data = reader.result as string;
 
         try {
-          const response = await fetch("/api/transcribe", {
+          const response = await fetch(apiUrl("/api/transcribe"), {
             method: "POST",
             headers: {
               "Content-Type": "application/json",

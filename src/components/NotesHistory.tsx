@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getTranslation } from "../locale";
+import { apiUrl } from "../config";
 
 interface MarkdownViewerProps {
   content: string;
@@ -615,7 +616,7 @@ export default function NotesHistory({
     };
 
     try {
-      const response = await fetch("/api/analyze-text", {
+      const response = await fetch(apiUrl("/api/analyze-text"), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

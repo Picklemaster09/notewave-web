@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { RecordingNote, UserTier } from "../types";
 import { motion, AnimatePresence } from "motion/react";
+import { apiUrl } from "../config";
 
 interface AIAgentWorkspaceProps {
   notes: RecordingNote[];
@@ -75,7 +76,7 @@ export default function AIAgentWorkspace({
   // Fetch usage limit info on mount and on message additions
   const fetchUsageDetails = async () => {
     try {
-      const response = await fetch(`/api/usage?tier=${tier}`);
+      const response = await fetch(apiUrl(`/api/usage?tier=${tier}`));
       if (response.ok) {
         const data = await response.json();
         setRateLimitInfo({ limit: data.limit, remaining: data.remaining });
@@ -126,7 +127,7 @@ export default function AIAgentWorkspace({
         language
       };
 
-      const response = await fetch("/api/ai-agent", {
+      const response = await fetch(apiUrl("/api/ai-agent"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(apiPayload)

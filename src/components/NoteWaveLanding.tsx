@@ -316,7 +316,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
                 Cloud
               </span>
             </h1>
-            <p className="text-[10.5px] text-gray-400 mt-1 font-semibold">Vocal Brainstorm Outline Synthesizer</p>
+            <p className="text-[10.5px] text-gray-400 mt-1 font-semibold">Turn your voice into action — instantly.</p>
           </div>
         </div>
       </header>
@@ -328,17 +328,22 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
         <div className="lg:col-span-7 flex flex-col gap-6">
           
           {/* Pitch intro */}
-          <div className="flex flex-col gap-2 max-w-xl">
-            <span className="w-fit text-[10px] uppercase font-mono tracking-widest bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full border border-blue-150 font-extrabold shadow-3xs">
-              ⚡ LIVE DEMO INTERACTIVE PREVIEW
+          <div className="flex flex-col gap-3 max-w-xl">
+            <span className="w-fit text-[10px] uppercase font-mono tracking-widest bg-blue-600/10 text-blue-700 px-2.5 py-1 rounded-full border border-blue-200 font-extrabold shadow-3xs flex items-center gap-1.5">
+              <Sparkles className="w-3 h-3" /> Try it live — no signup needed
             </span>
-            <h2 className="text-3xl lg:text-4xl font-black text-[#1C1C1E] tracking-tight leading-tight mt-1.5 font-sans">
-              Speak your brainstorm. <br />
-              <span className="text-blue-600">Get automatic checklists.</span>
+            <h2 className="text-4xl lg:text-5xl font-black text-[#1C1C1E] tracking-tight leading-[1.05] mt-1 font-sans">
+              Just talk.<br />
+              <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">We'll turn it into a plan.</span>
             </h2>
-            <p className="text-xs text-gray-500 leading-relaxed font-semibold mt-1">
-              NoteWave transcribes your spoken software projects, SaaS features, household tasks, and dates, then builds interactive deliverable roadmaps instantly via Gemini 1.5 Flash.
+            <p className="text-sm text-gray-500 leading-relaxed font-semibold mt-0.5">
+              Ramble for ten seconds about a project, an errand, or a 2&nbsp;a.m. idea — NoteWave's AI hands you a clean transcript, a sharp summary, and a checklist you can actually act on. No typing. No setup.
             </p>
+            <div className="flex flex-wrap gap-2 mt-1.5">
+              <span className="text-[10px] font-bold text-gray-600 bg-white border border-[#E5E5EA] px-2.5 py-1 rounded-full shadow-3xs">🎙️ 10-second voice notes</span>
+              <span className="text-[10px] font-bold text-gray-600 bg-white border border-[#E5E5EA] px-2.5 py-1 rounded-full shadow-3xs">✨ Auto summaries &amp; tags</span>
+              <span className="text-[10px] font-bold text-gray-600 bg-white border border-[#E5E5EA] px-2.5 py-1 rounded-full shadow-3xs">✅ Ready-to-check action lists</span>
+            </div>
           </div>          {/* High-Fidelity Simulated Live Demo Note */}
           <div className="bg-white rounded-2xl border border-[#E5E5EA] shadow-xl overflow-hidden flex flex-col">
             <div className="h-1.5 w-full bg-gradient-to-r from-indigo-500 to-blue-600" />
@@ -568,10 +573,10 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
               </div>
               <div>
                 <h4 className="text-xs font-black text-[#1C1C1E]">
-                  Get NoteWave Companion Phone App
+                  NoteWave in your pocket
                 </h4>
                 <p className="text-[10px] text-gray-500 mt-0.5 font-semibold">
-                  Publishing soon to iOS & Android. Run lightweight dictation locally!
+                  iOS &amp; Android coming soon — capture ideas the second they strike, even offline.
                 </p>
               </div>
             </div>
@@ -603,11 +608,14 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
               <div className="w-10 h-10 rounded-xl bg-[#4F46E5] flex items-center justify-center font-bold text-white shadow-md shadow-indigo-100 mb-1">
                 <ShieldCheck className="w-5 h-5 text-white" />
               </div>
-              <h3 className="text-lg font-black text-[#1C1C1E] leading-relaxed">
-                {authTab === "signin" ? "Sign In" : "Sign Up"}
+              <h3 className="text-xl font-black text-[#1C1C1E] leading-snug">
+                {authTab === "signin" ? "Welcome back" : "Start for free"}
               </h3>
-              <span className="text-[9px] text-[#4F46E5] bg-indigo-50/70 border border-indigo-100 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mt-0.5">
-                Powered by Auth0
+              <p className="text-[11px] text-gray-500 font-semibold">
+                {authTab === "signin" ? "Pick up right where you left off." : "Join in seconds — no credit card."}
+              </p>
+              <span className="text-[9px] text-[#4F46E5] bg-indigo-50/70 border border-indigo-100 px-2 py-0.5 rounded-full font-bold uppercase tracking-wider mt-1">
+                🔒 Secured by Auth0
               </span>
             </div>
 
@@ -701,7 +709,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
               onClick={() => onLogin?.({ signup: authTab === "register" })}
               className="w-full mt-1 text-xs font-bold py-3 px-4 rounded-xl bg-[#4F46E5] hover:bg-indigo-700 text-white transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>{authTab === "signin" ? "Sign In" : "Create Account"} securely</span>
+              <span>{authTab === "signin" ? "Sign In securely" : "Create my free account"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <p className="text-[10px] text-gray-400 text-center font-semibold leading-normal">

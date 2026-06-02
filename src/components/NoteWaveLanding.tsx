@@ -34,6 +34,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
   const [isDemoProcessing, setIsDemoProcessing] = useState(false);
   const [demoAudioStream, setDemoAudioStream] = useState<MediaStream | null>(null);
   const [demoError, setDemoError] = useState<string | null>(null);
+  const [demoUsed, setDemoUsed] = useState(false); // one free demo try per visit
 
   const demoMediaRecorderRef = useRef<MediaRecorder | null>(null);
   const demoAudioChunksRef = useRef<Blob[]>([]);
@@ -171,7 +172,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
 
           if (!response.ok) {
             if (result.error === "RATE_LIMIT_EXCEEDED") {
-              setDemoError("Free sandbox limit reached. Register a sync account below to enjoy infinite audio processing!");
+              setDemoError("That's your free demo — sign in for unlimited voice notes!");
             } else {
               setDemoError(result.message || "Failed to transcribe audio.");
             }
@@ -201,25 +202,26 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
           console.warn("Demo API connection fallback to high-fidelity Offline Local Sandbox:", e);
           
           setDemoTasks([
-            { id: "dt_fail_1", text: "Create high-fidelity landing page mockup", completed: false },
-            { id: "dt_fail_2", text: "Configure server-side Gemini 1.5 Flash transcription pipelines", completed: true },
-            { id: "dt_fail_3", text: "Bypass sandbox limits by linking personal Gemini Key in Settings", completed: false },
-            { id: "dt_fail_4", text: "Schedule main production launch milestones on the integrated agenda", completed: false }
+            { id: "dt_fail_1", text: "Capture the idea as a voice note", completed: true },
+            { id: "dt_fail_2", text: "Auto-transcribe & summarize with AI", completed: true },
+            { id: "dt_fail_3", text: "Turn it into a tagged, searchable action list", completed: false },
+            { id: "dt_fail_4", text: "Sign in to save it and run unlimited notes", completed: false }
           ]);
           setDemoActiveTab("checklist");
           setCustomDemoNote({
-            headlineTitle: "Offline Sandbox Demo: Voice Roadmap Active",
-            transcript: "You just recorded a live 10-second sandbox audio! Beautiful. Our audio waveform captures the microsecond intervals of your voice pitch, ready to compile tasks into custom bento grid schedules.",
-            summaryText: "NoteWave was unable to connect to the cloud transcription servers directly. We have fallen back to our high-fidelity Sandbox Engine so you can interact with mock timelines. Link your creator account or set your personal Gemini API key in Settings!",
+            headlineTitle: "Demo: your voice, turned into a plan",
+            transcript: "You just recorded a live 10-second note! NoteWave captures your voice and instantly shapes it into a clean transcript, a summary, and an actionable checklist.",
+            summaryText: "We couldn't reach the live transcription service this second, so here's a preview of what NoteWave produces from your voice. Sign in to run it for real — unlimited notes, saved and searchable.",
             category: "ideas",
-            ideaName: "OFFLINE SANDBOX MODE",
+            ideaName: "DEMO",
             duration: duration,
             scheduledDate: "Today",
             projectStartDate: "Immediate kickoff",
           });
-          setDemoError("NoteWave Cloud connection was reset or rate-limited. Enjoyed offline sandbox simulator! Configure your personal key in settings to unlock infinite speech processing.");
+          setDemoError("Couldn't reach the live demo service — here's a preview of what NoteWave makes from your voice. Sign in for the real thing, unlimited.");
         } finally {
           setIsDemoProcessing(false);
+          setDemoUsed(true); // lock the demo after one processed attempt
         }
       };
     } catch (e) {
@@ -420,17 +422,20 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shrink-0" />
-                    <span className="text-[10px] font-extrabold text-blue-800 uppercase tracking-widest font-sans">🎙️ Voice Onboarding Sandbox</span>
+                    <span className="text-[10px] font-extrabold text-blue-800 uppercase tracking-widest font-sans">🎙️ Live Voice Demo</span>
                   </div>
-                  <span className="text-[9px] bg-blue-100 text-blue-700 font-mono px-2 py-0.5 rounded-full font-bold">10s Max Test</span>
+                  <span className="text-[9px] bg-blue-100 text-blue-700 font-mono px-2 py-0.5 rounded-full font-bold">10s demo</span>
                 </div>
+                <p className="text-[10px] text-blue-900/70 font-semibold leading-snug">
+                  Speak naturally for ten seconds — NoteWave transcribes it, summarizes it, tags it, and turns it into a ready-to-check action list. One free try, on us.
+                </p>
 
                 <div className="flex flex-col gap-2 mt-1">
                   {isDemoRecording ? (
                     <div className="flex items-center justify-between gap-3 text-xs text-red-700 bg-red-50 border border-red-200 p-2.5 rounded-xl font-bold animate-pulse font-sans">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 bg-red-650 rounded-full animate-ping shrink-0" />
-                        <span>Speaking live demo: {demoRecordingSeconds}s / 10s</span>
+                        <span>Listening… {demoRecordingSeconds}s / 10s</span>
                       </div>
                       <button
                         type="button"
@@ -443,8 +448,17 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
                   ) : isDemoProcessing ? (
                     <div className="flex items-center justify-center gap-2.5 text-xs text-blue-800 bg-blue-50 border border-blue-200 p-2.5 rounded-xl font-bold font-sans">
                       <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                      <span>Gemini Flash transcribing & styling checklist...</span>
+                      <span>Transcribing &amp; building your checklist…</span>
                     </div>
+                  ) : demoUsed ? (
+                    <button
+                      type="button"
+                      onClick={() => onLogin?.({ signup: true })}
+                      className="w-full text-xs font-black py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:opacity-95 text-white shadow-sm transition-all flex items-center justify-center gap-2 border border-indigo-700 active:scale-97 cursor-pointer"
+                    >
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-200 animate-pulse" />
+                      <span>🔓 Loved it? Sign in for unlimited voice notes</span>
+                    </button>
                   ) : (
                     <button
                       type="button"
@@ -452,7 +466,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
                       className="w-full text-xs font-black py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm transition-all flex items-center justify-center gap-2 border border-indigo-700 active:scale-97 cursor-pointer"
                     >
                       <Sparkles className="w-3.5 h-3.5 text-indigo-200 animate-pulse" />
-                      <span>{customDemoNote ? "🎙️ Dictate Another 10s Sandbox Demo" : "🎙️ Test Your Action Voice (10s Micro Demo)"}</span>
+                      <span>🎙️ Speak for 10 seconds — watch the magic</span>
                     </button>
                   )}
 

@@ -87,7 +87,7 @@ export const locales: Record<string, LocalizationDict> = {
     tabDictate: "Transcribe voice idea",
     tabHistory: "Notes & Ideas",
     tabSettings: "Settings",
-    proTipLabel: "Pro Tip:",
+    proTipLabel: "Pro Tip",
     proTipContent: "Click the microphone recorder, speak naturally about any project launch, weekly retrospective, or study notes, and watch Gemini build structured action items instantaneously below!",
     systemSettings: "System Settings",
     systemSettingsSub: "Configure your credentials, model versions, and simulation preferences safely.",

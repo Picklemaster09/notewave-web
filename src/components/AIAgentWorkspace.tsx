@@ -327,7 +327,7 @@ export default function AIAgentWorkspace({
   };
 
   return (
-    <div id="ai-agent-workspace-container" className="flex-1 flex flex-col gap-5 p-4 md:p-6 bg-white card-theme border border-[#E5E5EA] rounded-3xl shadow-xl font-sans text-primary-theme">
+    <div id="ai-agent-workspace-container" className="flex-1 flex flex-col gap-5 p-4 md:p-6 bg-white card-theme border border-[#E5E5EA] rounded-3xl shadow-xl font-sans text-primary-theme md:h-[calc(100vh-5rem)]">
       
       {/* Header Widget detail */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F2F2F7] pb-4">
@@ -360,7 +360,7 @@ export default function AIAgentWorkspace({
           {messages.length > 0 && (
             <button
               onClick={handleClearHistory}
-              className="h-[34px] w-[34px] rounded-xl flex items-center justify-center border border-red-200 bg-red-50/50 text-red-650 hover:bg-red-600 hover:text-white hover:border-red-650 transition-all cursor-pointer shrink-0"
+              className="h-[34px] w-[34px] rounded-xl flex items-center justify-center border border-red-500/40 bg-red-500/15 text-red-500 hover:bg-red-600 hover:text-white hover:border-red-600 transition-all cursor-pointer shrink-0"
               title={t.clearingChat}
             >
               <Trash2 className="w-3.5 h-3.5" />
@@ -380,7 +380,7 @@ export default function AIAgentWorkspace({
       <div
         ref={chatContainerRef}
         id="ai-agent-chat-history"
-        className="flex-1 min-h-[320px] max-h-[480px] overflow-y-auto bg-slate-50/30 border border-[#E5E5EA] rounded-2xl p-4 flex flex-col gap-4 scrollbar-thin"
+        className="flex-1 min-h-[320px] md:min-h-0 overflow-y-auto agent-chat-surface border border-[#E5E5EA] rounded-2xl p-4 flex flex-col gap-4 scrollbar-thin"
       >
         {messages.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-gray-400 max-w-sm mx-auto select-none mt-12 mb-12">

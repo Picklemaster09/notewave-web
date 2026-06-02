@@ -186,6 +186,22 @@ body {
 .dark .text-green-800, [data-theme="dark"] .text-green-800 { color: #6ee7b7 !important; }
 .dark .text-red-800, [data-theme="dark"] .text-red-800 { color: #fca5a5 !important; }
 
+/* AI Agent chat surface — soft inset well in both themes
+   (replaces the washed-out translucent grey). */
+.agent-chat-surface {
+  background-color: #f4f5f7;
+}
+.dark .agent-chat-surface, [data-theme="dark"] .agent-chat-surface {
+  background-color: #0f172a;
+}
+
+/* Accent picker swatches: light hex is inline (looks great); only mute the
+   over-bright non-blue swatches in dark mode. Blue is intentionally untouched. */
+.dark .accent-swatch-orange, [data-theme="dark"] .accent-swatch-orange { background-color: #c2410c !important; }
+.dark .accent-swatch-purple, [data-theme="dark"] .accent-swatch-purple { background-color: #7e22ce !important; }
+.dark .accent-swatch-green, [data-theme="dark"] .accent-swatch-green { background-color: #047857 !important; }
+.dark .accent-swatch-red, [data-theme="dark"] .accent-swatch-red { background-color: #b91c1c !important; }
+
 /* 2. Text colors - high contrast headings & dominant texts */
 .dark, [data-theme="dark"] {
   h1, h2, h3, h4, h5, h6 {

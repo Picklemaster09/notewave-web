@@ -542,7 +542,7 @@ export default function SettingsPanel({
                       onSaveSettings({ ...settings, accentColor: col.id as any });
                     }}
                     style={{ backgroundColor: col.hex }}
-                    className={`w-9 h-9 rounded-full relative transition-all active:scale-90 border-2 border-black/10 flex items-center justify-center cursor-pointer ${
+                    className={`accent-swatch-${col.id} w-9 h-9 rounded-full relative transition-all active:scale-90 border-2 border-black/10 flex items-center justify-center cursor-pointer ${
                       accentColor === col.id
                         ? "shadow-md scale-110 ring-2 ring-offset-2 ring-slate-400"
                         : "hover:scale-105 opacity-80 hover:opacity-100"

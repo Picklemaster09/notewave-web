@@ -1,0 +1,29 @@
+name = "notewave-api"
+main = "src/index.ts"
+compatibility_date = "2024-11-01"
+
+# Bind the Worker to your custom domain. Easiest is to add the route in the
+# Cloudflare dashboard (Workers & Pages -> your worker -> Settings -> Domains &
+# Routes -> Add Custom Domain -> napi.ccma-fetch.space). Or uncomment:
+# routes = [{ pattern = "napi.ccma-fetch.space", custom_domain = true }]
+
+[vars]
+AUTH0_DOMAIN = "notewave.eu.auth0.com"
+# The Auth0 API identifier you create (Auth0 -> Applications -> APIs).
+# Use the SAME string for VITE_AUTH0_AUDIENCE in the frontend.
+AUTH0_AUDIENCE = "https://napi.ccma-fetch.space"
+ALLOWED_ORIGIN = "https://picklemaster09.github.io"
+GEMINI_MODEL = "gemini-1.5-flash"
+# Public Supabase project URL (the service-role KEY is a secret, set separately).
+SUPABASE_URL = "https://YOUR-PROJECT.supabase.co"
+
+# Secrets — DO NOT put these here. Set them with:
+#   npx wrangler secret put GEMINI_API_KEY
+#   npx wrangler secret put SUPABASE_SERVICE_ROLE_KEY
+
+# Optional: enable real rate limiting by creating a KV namespace and binding it:
+#   npx wrangler kv namespace create RATE_LIMIT
+# then paste the id below.
+# [[kv_namespaces]]
+# binding = "RATE_LIMIT"
+# id = "REPLACE_WITH_KV_NAMESPACE_ID"

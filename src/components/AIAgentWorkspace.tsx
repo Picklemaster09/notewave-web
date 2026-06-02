@@ -327,7 +327,7 @@ export default function AIAgentWorkspace({
   };
 
   return (
-    <div id="ai-agent-workspace-container" className="flex-1 flex flex-col gap-5 p-4 md:p-6 bg-white card-theme border border-[#E5E5EA] rounded-3xl shadow-xl font-sans text-primary-theme md:h-[calc(100vh-5rem)]">
+    <div id="ai-agent-workspace-container" className="flex flex-col gap-5 p-4 md:p-6 bg-white card-theme border border-[#E5E5EA] rounded-3xl shadow-xl font-sans text-primary-theme md:h-[calc(100vh-6rem)]">
       
       {/* Header Widget detail */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#F2F2F7] pb-4">

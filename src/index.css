@@ -106,7 +106,9 @@ body {
 .dark .bg-gray-50, [data-theme="dark"] .bg-gray-50,
 .dark .bg-gray-100, [data-theme="dark"] .bg-gray-100,
 .dark .bg-\[\#ffffff\], [data-theme="dark"] .bg-\[\#ffffff\],
-.dark .bg-\[\#FFFFFF\], [data-theme="dark"] .bg-\[\#FFFFFF\] {
+.dark .bg-\[\#FFFFFF\], [data-theme="dark"] .bg-\[\#FFFFFF\],
+.dark .bg-\[\#fdfdfd\], [data-theme="dark"] .bg-\[\#fdfdfd\],
+.dark .bg-\[\#FDFDFD\], [data-theme="dark"] .bg-\[\#FDFDFD\] {
   background-color: var(--bg-card) !important;
 }
 

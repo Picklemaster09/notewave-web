@@ -534,11 +534,11 @@ export default function SettingsPanel({
               
               <div className="flex items-center gap-3.5">
                 {[
-                  { id: "orange", colHex: "bg-orange-550 border-orange-600" },
-                  { id: "purple", colHex: "bg-purple-650 border-purple-700" },
-                  { id: "blue", colHex: "bg-blue-600 border-blue-700" },
-                  { id: "green", colHex: "bg-green-600 border-green-700" },
-                  { id: "red", colHex: "bg-red-600 border-red-700" }
+                  { id: "orange", hex: "#f97316" },
+                  { id: "purple", hex: "#8b5cf6" },
+                  { id: "blue", hex: "#3b82f6" },
+                  { id: "green", hex: "#10b981" },
+                  { id: "red", hex: "#ef4444" }
                 ].map((col) => (
                   <button
                     key={col.id}
@@ -547,9 +547,10 @@ export default function SettingsPanel({
                     onClick={() => {
                       onSaveSettings({ ...settings, accentColor: col.id as any });
                     }}
-                    className={`w-9 h-9 rounded-full relative transition-all active:scale-90 border-2 flex items-center justify-center cursor-pointer ${col.colHex} ${
-                      accentColor === col.id 
-                        ? "shadow-md scale-110 ring-2 ring-offset-2 ring-blue-500" 
+                    style={{ backgroundColor: col.hex }}
+                    className={`w-9 h-9 rounded-full relative transition-all active:scale-90 border-2 border-black/10 flex items-center justify-center cursor-pointer ${
+                      accentColor === col.id
+                        ? "shadow-md scale-110 ring-2 ring-offset-2 ring-slate-400"
                         : "hover:scale-105 opacity-80 hover:opacity-100"
                     }`}
                   >

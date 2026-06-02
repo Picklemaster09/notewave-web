@@ -640,14 +640,6 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
                 </svg>
                 <span>Continue with Google</span>
               </button>
-              
-              <button
-                type="button"
-                onClick={() => handleAuth0SocialSignIn()}
-                className="w-full text-center text-[10.5px] font-bold text-indigo-600 hover:text-indigo-800 transition-all cursor-pointer hover:underline"
-              >
-                Or use other social options (GitHub, Apple, etc.)
-              </button>
             </div>
 
             {/* Separator line */}
@@ -678,7 +670,7 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
               onClick={() => onLogin?.({ signup: authTab === "register" })}
               className="w-full mt-1 text-xs font-bold py-3 px-4 rounded-xl bg-[#4F46E5] hover:bg-indigo-700 text-white transition-all shadow-sm active:scale-95 flex items-center justify-center gap-1.5 cursor-pointer"
             >
-              <span>{authTab === "signin" ? "Sign In securely" : "Create my free account"}</span>
+              <span>{authTab === "signin" ? "Sign In" : "Register"}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
             <p className="text-[10px] text-gray-400 text-center font-semibold leading-normal">

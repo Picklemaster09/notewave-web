@@ -71,9 +71,6 @@ export default function SettingsPanel({
   });
   const themeMode = settings.theme || "light";
   const accentColor = settings.accentColor || "blue";
-  const [cloudProcessing, setCloudProcessing] = useState(() => {
-    return localStorage.getItem("settings_cloud_processing") !== "false";
-  });
   const [autoTranscribe, setAutoTranscribe] = useState(() => {
     return localStorage.getItem("settings_auto_transcribe") !== "false";
   });
@@ -104,9 +101,6 @@ export default function SettingsPanel({
 
   // Synchronized via global App settings config
 
-  useEffect(() => {
-    localStorage.setItem("settings_cloud_processing", String(cloudProcessing));
-  }, [cloudProcessing]);
 
   useEffect(() => {
     localStorage.setItem("settings_auto_transcribe", String(autoTranscribe));
@@ -599,26 +593,6 @@ export default function SettingsPanel({
               </label>
 
               <div className="flex flex-col gap-2 bg-[#fdfdfd] border border-[#E5E5EA] rounded-2xl p-2.5">
-                
-                {/* Cloud processing toggle */}
-                <div className="flex items-center justify-between gap-4 p-2 pb-2.5 border-b border-[#F2F2F7]">
-                  <div className="flex-1">
-                    <span className="text-xs font-bold text-[#1C1C1E] block">Cloud Processing</span>
-                    <span className="text-[10px] text-gray-500 font-semibold leading-relaxed">Use cloud AI for faster, more accurate results</span>
-                  </div>
-                  <button
-                    id="toggle-ai-cloud"
-                    type="button"
-                    onClick={() => setCloudProcessing(!cloudProcessing)}
-                    className={`w-10 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                      cloudProcessing ? "bg-amber-500 border border-transparent" : "bg-slate-50 border border-[#D1D1D6] cursor-pointer"
-                    }`}
-                  >
-                    <div className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform ${
-                      cloudProcessing ? "translate-x-4" : "translate-x-0"
-                    }`} />
-                  </button>
-                </div>
 
                 {/* Auto transcribe toggle */}
                 <div className="flex items-center justify-between gap-4 p-2 pb-2.5 border-b border-[#F2F2F7]">

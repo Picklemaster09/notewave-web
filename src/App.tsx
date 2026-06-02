@@ -121,13 +121,6 @@ export default function App() {
   const [activeLogIdx, setActiveLogIdx] = useState(0);
   const [isAuthorizing, setIsAuthorizing] = useState(false);
 
-  const autofillTestCard = () => {
-    setCardName(localProfileName || "Jane Doe");
-    setCardNumber("4242 4242 4242 4242");
-    setCardExpiry("12/28");
-    setCardCvc("123");
-  };
-
   const handleCardNumberChange = (value: string) => {
     const clean = value.replace(/\D/g, "");
     const formatted = clean.match(/.{1,4}/g)?.join(" ") || clean;
@@ -898,66 +891,66 @@ export default function App() {
               <div>
                 <div className="flex items-center gap-1.5 mb-6">
                   <span className="text-xl">👑</span>
-                  <span className="font-mono text-xs font-black tracking-widest text-[#F39C12] uppercase">
+                  <span className="font-mono text-xs font-black tracking-widest text-[var(--accent-color)] uppercase">
                     NoteWave Pro
                   </span>
                 </div>
 
                 <h3 className="text-lg md:text-xl font-extrabold tracking-tight leading-snug">
-                  {settings.language === "es" ? "Actualiza a NoteWave Pro" : "Upgrade to NoteWave Pro"}
+                  {settings.language === "es" ? "Hazte NoteWave Pro" : "Upgrade to NoteWave Pro"}
                 </h3>
                 <p className="text-[10px] md:text-xs text-slate-300 mt-2 font-medium leading-relaxed">
-                  {settings.language === "es" 
-                    ? "Elimina los límites de almacenamiento y habilita la transcripción de inteligencia artificial ilimitada con Gemini." 
-                    : "Lift storage caps and unlock unlimited Speech to Action cloud processing powered by Gemini."}
+                  {settings.language === "es"
+                    ? "Más almacenamiento y procesamiento de voz a acción todo el día con Gemini, pensado para que nunca pienses en los límites."
+                    : "More storage and all-day Speech-to-Action processing powered by Gemini — built so you never think about limits."}
                 </p>
 
                 {/* Benefits List */}
                 <div className="flex flex-col gap-3.5 mt-6 font-sans">
                   <div className="flex items-start gap-2.5">
-                    <span className="text-xs text-[#F39C12] mt-0.5">⚡</span>
+                    <span className="text-xs text-[var(--accent-color)] mt-0.5">⚡</span>
                     <div className="text-[11px] leading-tight">
                       <strong className="block text-white">
-                        {settings.language === "es" ? "Caché de 1 GB segura" : "1 GB Capacity Cloud Safe"}
+                        {settings.language === "es" ? "Bóveda segura de 1 GB" : "1 GB Secure Cloud Vault"}
                       </strong>
                       <span className="text-slate-300">
-                        {settings.language === "es" ? "Guarda cientos de dictados (vs 10MB)" : "Upload multiple massive dictation files safely"}
+                        {settings.language === "es" ? "Guarda toda tu biblioteca de voz y notas con copia de seguridad" : "Back up your entire voice & note library, safely"}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5">
-                    <span className="text-xs text-[#F39C12] mt-0.5">🎙️</span>
+                    <span className="text-xs text-[var(--accent-color)] mt-0.5">🎙️</span>
                     <div className="text-[11px] leading-tight">
                       <strong className="block text-white">
-                        {settings.language === "es" ? "Grabaciones ilimitadas" : "Unlimited Recordings"}
+                        {settings.language === "es" ? "Captura con IA todo el día" : "All-Day AI Capture"}
                       </strong>
                       <span className="text-slate-300">
-                        {settings.language === "es" ? "Transcribe sin límites diarios (vs 5 memos)" : "Bypass daily transcript limitations completely"}
+                        {settings.language === "es" ? "Hasta 50 notas con IA al día: de sobra para no tocar nunca un límite" : "Up to 50 AI notes a day — plenty to never hit a wall"}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5">
-                    <span className="text-xs text-[#F39C12] mt-0.5">📄</span>
+                    <span className="text-xs text-[var(--accent-color)] mt-0.5">📄</span>
                     <div className="text-[11px] leading-tight">
                       <strong className="block text-white">
-                        {settings.language === "es" ? "Subida ilimitada de archivos" : "Unlimited Text Imports"}
+                        {settings.language === "es" ? "Importación de texto y archivos" : "Instant Text & File Imports"}
                       </strong>
                       <span className="text-slate-300">
-                        {settings.language === "es" ? "Indexa archivos extensos y PDF (vs 3)" : "Process transcript briefings instantly (vs 3 log limit)"}
+                        {settings.language === "es" ? "Convierte documentos y notas largas en acciones al instante" : "Turn documents and long notes into action items in seconds"}
                       </span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5">
-                    <span className="text-xs text-[#F39C12] mt-0.5">🧠</span>
+                    <span className="text-xs text-[var(--accent-color)] mt-0.5">🧠</span>
                     <div className="text-[11px] leading-tight">
                       <strong className="block text-white">
-                        {settings.language === "es" ? "Modelos avanzados habilitados" : "Advanced Processing"}
+                        {settings.language === "es" ? "Procesamiento Gemini prioritario" : "Priority Gemini Processing"}
                       </strong>
                       <span className="text-slate-300">
-                        {settings.language === "es" ? "Respuestas más rápidas y hojas de ruta ampliadas" : "Gemini high-fidelity outputs for action tasks"}
+                        {settings.language === "es" ? "Transcripciones más rápidas y resúmenes de alta fidelidad" : "Faster, higher-fidelity transcripts & summaries"}
                       </span>
                     </div>
                   </div>
@@ -968,7 +961,7 @@ export default function App() {
                 <span className="flex items-center gap-1">
                   🔒 {settings.language === "es" ? "Seguro" : "SSL Encrypted"}
                 </span>
-                <span>Powered by Stripe Sandbox</span>
+                <span>Powered by Stripe</span>
               </div>
             </div>
 
@@ -979,7 +972,7 @@ export default function App() {
               <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-4 mb-4 select-none">
                 <div>
                   <h4 className="text-xs font-extrabold text-[#1C1C1E] uppercase tracking-wider">
-                    {settings.language === "es" ? "Pasarela de Pago Segura" : "Secure Sandbox Checkout"}
+                    {settings.language === "es" ? "Pago Seguro" : "Secure Checkout"}
                   </h4>
                   {limitErrorMsg && (
                     <p className="text-[10px] text-red-600 font-bold mt-1 max-w-md bg-red-50 p-2 rounded-lg border border-red-105">
@@ -1031,29 +1024,29 @@ export default function App() {
                   </div>
 
                   {/* Credit Card Mock Visual */}
-                  <div className="relative h-28 rounded-2xl bg-gradient-to-tr from-[#F1C40F] via-yellow-500 to-amber-600 text-slate-900 p-4 flex flex-col justify-between shadow-md select-none font-mono">
+                  <div className="relative h-28 rounded-2xl bg-gradient-to-tr from-[var(--accent-color)] to-[var(--accent-color-hover)] text-white p-4 flex flex-col justify-between shadow-md select-none font-mono">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-800">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-white/90">
                         NoteWave Premium
                       </span>
                       <span className="text-lg font-black italic">VISA</span>
                     </div>
 
-                    <div className="text-sm font-bold tracking-widest text-[#111] drop-shadow-2xs">
+                    <div className="text-sm font-bold tracking-widest text-white drop-shadow-2xs">
                       {cardNumber || "•••• •••• •••• ••••"}
                     </div>
 
-                    <div className="flex justify-between text-[10px] text-slate-900 font-bold">
+                    <div className="flex justify-between text-[10px] text-white font-bold">
                       <div className="truncate max-w-[150px]">
                         {cardName.toUpperCase() || "NAME SURNAME"}
                       </div>
                       <div className="flex gap-3">
                         <div>
-                          <span className="text-[7.5px] uppercase block leading-none text-slate-700">Valid Thru</span>
+                          <span className="text-[7.5px] uppercase block leading-none text-white/70">Valid Thru</span>
                           <span>{cardExpiry || "MM/YY"}</span>
                         </div>
                         <div>
-                          <span className="text-[7.5px] uppercase block leading-none text-slate-700">CVC</span>
+                          <span className="text-[7.5px] uppercase block leading-none text-white/70">CVC</span>
                           <span>{cardCvc || "•••"}</span>
                         </div>
                       </div>
@@ -1067,20 +1060,13 @@ export default function App() {
                         <label className="text-gray-600 text-[10px] uppercase font-bold tracking-wide">
                           {settings.language === "es" ? "Nombre del Titular" : "Cardholder Name"}
                         </label>
-                        <button
-                          type="button"
-                          onClick={autofillTestCard}
-                          className="text-[9.5px] text-blue-600 font-black tracking-tight hover:underline flex items-center gap-1 cursor-pointer"
-                        >
-                          🧪 {settings.language === "es" ? "Autocompletar Test" : "Autofill Safe Test Card"}
-                        </button>
                       </div>
                       <input
                         type="text"
                         placeholder="e.g. Jane Doe"
                         value={cardName}
                         onChange={(e) => setCardName(e.target.value)}
-                        className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden focus:border-amber-500 transition-colors font-medium bg-[#fdfdfd]"
+                        className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden focus:border-[var(--accent-color)] transition-colors font-medium bg-[#fdfdfd]"
                       />
                     </div>
 
@@ -1090,10 +1076,10 @@ export default function App() {
                       </label>
                       <input
                         type="text"
-                        placeholder="4242 4242 4242 4242"
+                        placeholder="1234 5678 9012 3456"
                         value={cardNumber}
                         onChange={(e) => handleCardNumberChange(e.target.value)}
-                        className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden focus:border-amber-500 transition-colors font-mono font-bold bg-[#fdfdfd]"
+                        className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden focus:border-[var(--accent-color)] transition-colors font-mono font-bold bg-[#fdfdfd]"
                       />
                     </div>
 
@@ -1107,7 +1093,7 @@ export default function App() {
                           placeholder="01/29"
                           value={cardExpiry}
                           onChange={(e) => handleExpiryChange(e.target.value)}
-                          className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden text-center focus:border-amber-500 transition-colors font-mono font-bold bg-[#fdfdfd]"
+                          className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden text-center focus:border-[var(--accent-color)] transition-colors font-mono font-bold bg-[#fdfdfd]"
                         />
                       </div>
 
@@ -1118,7 +1104,7 @@ export default function App() {
                           placeholder="123"
                           value={cardCvc}
                           onChange={(e) => handleCvcChange(e.target.value)}
-                          className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden text-center focus:border-amber-500 transition-colors font-mono font-bold bg-[#fdfdfd]"
+                          className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden text-center focus:border-[var(--accent-color)] transition-colors font-mono font-bold bg-[#fdfdfd]"
                         />
                       </div>
 
@@ -1128,7 +1114,7 @@ export default function App() {
                           type="text"
                           maxLength={5}
                           placeholder="90210"
-                          className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden text-center focus:border-amber-500 transition-colors font-mono font-bold bg-[#fdfdfd]"
+                          className="py-2 px-3 border border-[#E5E5EA] rounded-xl outline-hidden text-center focus:border-[var(--accent-color)] transition-colors font-mono font-bold bg-[#fdfdfd]"
                         />
                       </div>
                     </div>
@@ -1139,16 +1125,16 @@ export default function App() {
                     type="button"
                     onClick={() => {
                       if (!cardName || !cardNumber || !cardExpiry || !cardCvc) {
-                        alert(settings.language === "es" 
-                          ? "Por favor, complete los datos de la tarjeta o haga clic en 'Autocompletar Test' para evaluar la simulación con un solo clic." 
-                          : "Please fill out all billing card credentials or click 'Autofill Safe Test Card' to evaluate securely in one click.");
+                        alert(settings.language === "es"
+                          ? "Por favor, complete todos los datos de la tarjeta para continuar."
+                          : "Please fill out all billing card details to continue.");
                         return;
                       }
                       startCheckoutSimulation();
                     }}
-                    className="w-full mt-2 py-3 uppercase tracking-wider text-xs font-black bg-[#F39C12] hover:bg-amber-600 text-white rounded-2xl transition-all hover:scale-101 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
+                    className="w-full mt-2 py-3 uppercase tracking-wider text-xs font-black bg-[var(--accent-color)] hover:bg-[var(--accent-color-hover)] text-white rounded-2xl transition-all hover:scale-101 cursor-pointer flex items-center justify-center gap-2 shadow-sm"
                   >
-                    💳 {settings.language === "es" ? "Seguro: Autorizar Cobro de Simulación" : "Authorize Secure Sandbox Charge"} ({billingCycle === "monthly" ? "$9.00" : "$79.00"})
+                    💳 {settings.language === "es" ? "Pagar de Forma Segura" : "Pay Securely"} ({billingCycle === "monthly" ? "$9.00" : "$79.00"})
                   </button>
                 </div>
               )}
@@ -1157,8 +1143,8 @@ export default function App() {
               {checkoutStep === "processing" && (
                 <div className="flex flex-col items-center justify-center text-center gap-6 py-6 font-sans">
                   <div className="relative flex items-center justify-center w-16 h-16">
-                    <span className="absolute inline-flex h-full w-full rounded-full bg-amber-100 animate-ping opacity-75" />
-                    <div className="w-12 h-12 rounded-full border-4 border-amber-500 border-t-transparent animate-spin" />
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-[var(--accent-color-light)] animate-ping opacity-75" />
+                    <div className="w-12 h-12 rounded-full border-4 border-[var(--accent-color)] border-t-transparent animate-spin" />
                   </div>
 
                   <div>
@@ -1166,7 +1152,7 @@ export default function App() {
                       {settings.language === "es" ? "Procesamiento de Autorización SSL..." : "Synchronizing Secure AuthSSL Connection..."}
                     </h5>
                     <p className="text-[10px] text-gray-400 mt-1 font-semibold">
-                      Please don't interrupt the mock transaction pipeline.
+                      Please don't close this window while we process your payment.
                     </p>
                   </div>
 
@@ -1174,28 +1160,28 @@ export default function App() {
                   <div className="w-full max-w-sm bg-slate-50 border border-[#E5E5EA] rounded-2xl p-4 text-left flex flex-col gap-2 font-mono text-[10px]">
                     <div className={`flex items-center gap-2 ${activeLogIdx >= 1 ? "text-green-650" : "text-gray-400"}`}>
                       <span>{activeLogIdx >= 1 ? "✅" : "⏳"}</span>
-                      <span className={activeLogIdx === 1 ? "font-bold animate-pulse text-amber-600" : ""}>
+                      <span className={activeLogIdx === 1 ? "font-bold animate-pulse text-[var(--accent-color)]" : ""}>
                         {settings.language === "es" ? "1. Canal seguro SSL con Stripe inicializado..." : "1. Initializing SSL connection with Stripe engine..."}
                       </span>
                     </div>
 
                     <div className={`flex items-center gap-2 ${activeLogIdx >= 2 ? "text-green-650" : "text-gray-400"}`}>
                       <span>{activeLogIdx >= 2 ? "✅" : "⏳"}</span>
-                      <span className={activeLogIdx === 2 ? "font-bold animate-pulse text-amber-600" : ""}>
+                      <span className={activeLogIdx === 2 ? "font-bold animate-pulse text-[var(--accent-color)]" : ""}>
                         {settings.language === "es" ? "2. Validando firmas criptográficas de la tarjeta..." : "2. Validating cryptographical card token signatures..."}
                       </span>
                     </div>
 
                     <div className={`flex items-center gap-2 ${activeLogIdx >= 3 ? "text-green-650" : "text-gray-400"}`}>
                       <span>{activeLogIdx >= 3 ? "✅" : "⏳"}</span>
-                      <span className={activeLogIdx === 3 ? "font-bold animate-pulse text-amber-600" : ""}>
-                        {settings.language === "es" ? "3. Autorizando fondos contra banco simulated..." : "3. Transferring authorization request to gateway router..."}
+                      <span className={activeLogIdx === 3 ? "font-bold animate-pulse text-[var(--accent-color)]" : ""}>
+                        {settings.language === "es" ? "3. Autorizando los fondos con tu banco..." : "3. Transferring authorization request to gateway router..."}
                       </span>
                     </div>
 
                     <div className={`flex items-center gap-2 ${activeLogIdx >= 4 ? "text-green-650" : "text-gray-400"}`}>
                       <span>{activeLogIdx >= 4 ? "✅" : "⏳"}</span>
-                      <span className={activeLogIdx === 4 ? "font-bold animate-pulse text-amber-600" : ""}>
+                      <span className={activeLogIdx === 4 ? "font-bold animate-pulse text-[var(--accent-color)]" : ""}>
                         {settings.language === "es" ? "4. Sincronizando privilegios de NoteWave Pro..." : "4. Handshaking NoteWave Pro vaults & database limits..."}
                       </span>
                     </div>

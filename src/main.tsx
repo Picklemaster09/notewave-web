@@ -8,6 +8,12 @@ const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN;
 const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID;
 const auth0Audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 
+// Login always resolves on the app origin so the Auth0 session (per-origin) is
+// created where the dashboard runs. Falls back to the current page when no
+// dedicated app host is configured.
+const appBaseUrl =
+  import.meta.env.VITE_APP_URL || window.location.origin + import.meta.env.BASE_URL;
+
 // Authentication is handled directly by Auth0 in the browser (Universal Login,
 // PKCE — no client secret). Tokens are cached so sessions survive reloads.
 const tree = auth0Domain && auth0ClientId ? (
@@ -15,9 +21,7 @@ const tree = auth0Domain && auth0ClientId ? (
     domain={auth0Domain}
     clientId={auth0ClientId}
     authorizationParams={{
-      // Include the Vite base path so the redirect lands on the deployed app
-      // (e.g. https://user.github.io/notewave-web/), not the domain root.
-      redirect_uri: window.location.origin + import.meta.env.BASE_URL,
+      redirect_uri: appBaseUrl,
       ...(auth0Audience ? {audience: auth0Audience} : {}),
     }}
     cacheLocation="localstorage"

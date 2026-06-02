@@ -21,6 +21,7 @@ import { Mic, Settings as SettingsIcon, History, Key, Check, HelpCircle, Layers,
 import { getTranslation, LANGUAGE_OPTIONS } from "./locale";
 import { useAuth0 } from "@auth0/auth0-react";
 import { registerTokenGetter } from "./authToken";
+import { APP_URL, isLandingHost } from "./config";
 
 
 const LOCAL_STORAGE_NOTES_KEY = "notewave_local_notes";
@@ -583,6 +584,25 @@ export default function App() {
   };
 
   const t = getTranslation(settings.language || "en");
+
+  // Landing/root host (two-host setup): only ever show the marketing + demo page.
+  // Signing in redirects to the app host (Auth0 redirect_uri = app origin), and an
+  // already-authenticated visitor is moved straight to the app.
+  if (isLandingHost) {
+    if (isAuthenticated) {
+      window.location.href = APP_URL;
+      return null;
+    }
+    return (
+      <NoteWaveLanding
+        onLogin={handleLogin}
+        onLanguageChange={(lang) => {
+          handleSaveSettings({ ...settings, language: lang });
+        }}
+        currentLanguage={settings.language}
+      />
+    );
+  }
 
   if (authLoading || (isAuthenticated && !currentUser)) {
     return (

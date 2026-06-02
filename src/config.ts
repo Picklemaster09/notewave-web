@@ -15,3 +15,28 @@ export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BA
 export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
+
+// ---------------------------------------------------------------------------
+// Two-host setup (optional).
+//
+// When VITE_APP_URL points to a SEPARATE origin (e.g. https://app.example.com),
+// the landing/demo lives on the current root origin and the signed-in dashboard
+// lives on the app origin. Sign-in redirects the user to the app origin.
+//
+// When VITE_APP_URL is empty (or equals the current origin), everything runs as
+// a single page: the landing shows when logged out, the dashboard when logged in.
+// ---------------------------------------------------------------------------
+export const APP_URL = (import.meta.env.VITE_APP_URL ?? "").replace(/\/+$/, "");
+
+const appOrigin = (() => {
+  try {
+    return APP_URL ? new URL(APP_URL).origin : "";
+  } catch {
+    return "";
+  }
+})();
+
+/** True when a separate app origin is configured and we're currently NOT on it
+ * (i.e. we're on the landing/root host). */
+export const isLandingHost =
+  !!appOrigin && typeof window !== "undefined" && window.location.origin !== appOrigin;

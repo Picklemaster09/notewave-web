@@ -163,6 +163,29 @@ body {
   background-color: rgba(255, 255, 255, 0.06) !important;
 }
 
+/* Pastel / translucent alert & info banners (and theme preview buttons):
+   in dark mode flatten the washed-out light tints to a readable dark surface. */
+.dark .bg-blue-50\/40, [data-theme="dark"] .bg-blue-50\/40,
+.dark .bg-amber-50\/70, [data-theme="dark"] .bg-amber-50\/70,
+.dark .bg-green-50\/70, [data-theme="dark"] .bg-green-50\/70,
+.dark .bg-red-50\/50, [data-theme="dark"] .bg-red-50\/50,
+.dark .bg-stone-50, [data-theme="dark"] .bg-stone-50 {
+  background-color: var(--bg-input) !important;
+}
+
+/* Neutralize the light colored borders those banners use */
+.dark .border-blue-100, [data-theme="dark"] .border-blue-100,
+.dark .border-amber-200, [data-theme="dark"] .border-amber-200,
+.dark .border-green-200, [data-theme="dark"] .border-green-200,
+.dark .border-red-100, [data-theme="dark"] .border-red-100 {
+  border-color: var(--border-color) !important;
+}
+
+/* Keep the dark alert text legible on the new dark surface */
+.dark .text-amber-800, [data-theme="dark"] .text-amber-800 { color: #fcd34d !important; }
+.dark .text-green-800, [data-theme="dark"] .text-green-800 { color: #6ee7b7 !important; }
+.dark .text-red-800, [data-theme="dark"] .text-red-800 { color: #fca5a5 !important; }
+
 /* 2. Text colors - high contrast headings & dominant texts */
 .dark, [data-theme="dark"] {
   h1, h2, h3, h4, h5, h6 {

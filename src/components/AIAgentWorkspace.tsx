@@ -42,6 +42,7 @@ export default function AIAgentWorkspace({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   const isEs = language === "es";
 
@@ -69,8 +70,12 @@ export default function AIAgentWorkspace({
 
   useEffect(() => {
     localStorage.setItem("notewave_agent_chat", JSON.stringify(messages));
-    if (chatEndRef.current) {
-      chatEndRef.current.scrollIntoView({ behavior: "smooth" });
+    // Scroll only the chat container to its bottom — never scrollIntoView,
+    // which would also scroll the page window and nudge the whole screen down
+    // when switching to this tab.
+    const container = chatContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
     }
   }, [messages]);
 
@@ -372,7 +377,8 @@ export default function AIAgentWorkspace({
       )}
 
       {/* Chat Messages Body Panel */}
-      <div 
+      <div
+        ref={chatContainerRef}
         id="ai-agent-chat-history"
         className="flex-1 min-h-[320px] max-h-[480px] overflow-y-auto bg-slate-50/30 border border-[#E5E5EA] rounded-2xl p-4 flex flex-col gap-4 scrollbar-thin"
       >

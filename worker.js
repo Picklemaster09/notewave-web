@@ -122,12 +122,39 @@ function bearer(req) {
 const FREE_DAILY = 3;
 const PREMIUM_DAILY = 50;
 
-async function checkRateLimit(env, key, limit, windowSec = 86400) {
+// Combined stored-note cap (voice notes + uploads together). Also keeps the AI
+// agent prompt bounded, since the agent is fed every note.
+const FREE_NOTES = 10;
+const PREMIUM_NOTES = 100;
+function noteLimit(plan) {
+  return plan === "premium" ? PREMIUM_NOTES : FREE_NOTES;
+}
+
+// Per-calendar-day (UTC) counter key, so usage resets at 00:00 UTC instead of
+// rolling 24h from the last request.
+function rateKey(sub) {
+  return `ai:${sub}:${new Date().toISOString().slice(0, 10)}`;
+}
+// Seconds until the next UTC midnight (floored at KV's 60s minimum). Always
+// targets the same wall-clock midnight, so re-putting never extends the window.
+function secondsUntilUtcReset() {
+  const now = Date.now();
+  const midnight = new Date(now);
+  midnight.setUTCHours(24, 0, 0, 0);
+  return Math.max(60, Math.ceil((midnight.getTime() - now) / 1000));
+}
+function hoursUntilUtcReset() {
+  return Math.ceil(secondsUntilUtcReset() / 3600);
+}
+
+async function checkRateLimit(env, key, limit) {
   if (!env.RATE_LIMIT) return { allowed: true, remaining: limit };
   const raw = await env.RATE_LIMIT.get(key);
   const count = raw ? parseInt(raw, 10) || 0 : 0;
   if (count >= limit) return { allowed: false, remaining: 0 };
-  await env.RATE_LIMIT.put(key, String(count + 1), { expirationTtl: windowSec });
+  await env.RATE_LIMIT.put(key, String(count + 1), {
+    expirationTtl: secondsUntilUtcReset(),
+  });
   return { allowed: true, remaining: limit - (count + 1) };
 }
 
@@ -147,7 +174,7 @@ function planLimit(plan) {
 
 // ---------- Gemini ----------
 function geminiModel(env) {
-  return env.GEMINI_MODEL || "gemini-2.5-flash";
+  return env.GEMINI_MODEL || "gemini-3.5-flash";
 }
 async function geminiGenerate(env, parts, jsonMode) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel(
@@ -305,7 +332,7 @@ async function handleTranscribe(env, req, claims) {
   const b = await req.json().catch(() => ({}));
   if (!b.audio) return json(env, req, { error: "Missing audio" }, 400);
   const plan = await getPlan(env, claims.sub);
-  const rl = await checkRateLimit(env, `ai:${claims.sub}`, planLimit(plan));
+  const rl = await checkRateLimit(env, rateKey(claims.sub), planLimit(plan));
   if (!rl.allowed)
     return json(
       env,
@@ -339,7 +366,7 @@ async function handleAnalyzeText(env, req, claims) {
   const b = await req.json().catch(() => ({}));
   if (!b.text) return json(env, req, { error: "Missing text" }, 400);
   const plan = await getPlan(env, claims.sub);
-  const rl = await checkRateLimit(env, `ai:${claims.sub}`, planLimit(plan));
+  const rl = await checkRateLimit(env, rateKey(claims.sub), planLimit(plan));
   if (!rl.allowed)
     return json(
       env,
@@ -375,7 +402,7 @@ async function handleAiAgent(env, req, claims) {
   const messages = Array.isArray(b.messages) ? b.messages : [];
   const notes = Array.isArray(b.notes) ? b.notes : [];
   const plan = await getPlan(env, claims.sub);
-  const rl = await checkRateLimit(env, `ai:${claims.sub}`, planLimit(plan));
+  const rl = await checkRateLimit(env, rateKey(claims.sub), planLimit(plan));
   if (!rl.allowed)
     return json(
       env,
@@ -423,12 +450,31 @@ async function handleSyncNotes(env, req, claims) {
   const notes = Array.isArray(b.notes) ? b.notes : [];
   const userId = await resolveUserId(env, claims.sub, claims.email);
   const rows = notes.map((n) => noteToDb(n, userId));
-  if (rows.length)
+  if (rows.length) {
+    // Enforce the combined note cap on the post-merge total (existing rows
+    // unioned with incoming ids), so it holds even against direct API calls.
+    const plan = await getPlan(env, claims.sub);
+    const limit = noteLimit(plan);
+    const existing = await sb(env, `notes?user_id=eq.${userId}&select=id`);
+    const ids = new Set(((await existing.json().catch(() => [])) || []).map((r) => r.id));
+    for (const r of rows) ids.add(r.id);
+    if (ids.size > limit)
+      return json(
+        env,
+        req,
+        {
+          error: "NOTE_LIMIT_REACHED",
+          message: `Note limit reached (${limit} max on the ${plan} plan).`,
+          limit,
+        },
+        403
+      );
     await sb(env, "notes?on_conflict=id", {
       method: "POST",
       headers: { Prefer: "resolution=merge-duplicates" },
       body: JSON.stringify(rows),
     });
+  }
   return json(env, req, { success: true });
 }
 async function handleDeleteNote(env, req, claims, id) {
@@ -473,11 +519,10 @@ async function handleUsage(env, req, claims) {
   const limit = planLimit(plan);
   let remaining = limit;
   if (env.RATE_LIMIT && claims?.sub) {
-    const key = `ai:${claims.sub}`;
-    const raw = await env.RATE_LIMIT.get(key);
+    const raw = await env.RATE_LIMIT.get(rateKey(claims.sub));
     remaining = Math.max(0, limit - (raw ? parseInt(raw, 10) || 0 : 0));
   }
-  return json(env, req, { limit, remaining, resetInHours: 24 });
+  return json(env, req, { limit, remaining, resetInHours: hoursUntilUtcReset() });
 }
 
 // ---------- Router (single entry point) ----------

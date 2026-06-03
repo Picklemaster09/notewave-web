@@ -420,50 +420,34 @@ export default function App() {
   const handleAddNewNote = async (newNote: RecordingNote) => {
     const isPremium = settings.tier === "premium";
     
-    const uploadNotes = notes.filter(n => Array.isArray(n.tags) && n.tags.includes("uploaded"));
-    const voiceNotes = notes.filter(n => Array.isArray(n.tags) && !n.tags.includes("uploaded"));
-    
-    const uploadsCount = uploadNotes.length;
-    const voiceMemosCount = voiceNotes.length;
-    
-    const totalTextBytes = notes.reduce((acc, note) => acc + getNoteTextSizeBytes(note), 0);
-    const totalAudioBytes = voiceNotes.reduce((acc, note) => acc + getNoteAudioSizeBytes(note), 0);
-    const totalUsedKB = (totalTextBytes + totalAudioBytes) / 1024;
-
-    const isNoteUpload = Array.isArray(newNote.tags) && newNote.tags.includes("uploaded");
-
-    // Check if limits are hit on Free Tier for file counts
-    if (!isPremium) {
-      if (isNoteUpload && uploadsCount >= 3) {
-        setLimitErrorMsg(settings.language === "es" 
-          ? "¡Límite de subida alcanzado (3 de 3 archivos procesados)! Actualiza a Pro para subir documentos ilimitados."
-          : "Document uploads limit reached (3 of 3 materials indexed)! Upgrade to Pro for unlimited document uploads and AI vector intelligence mapping.");
-        setShowUpgradeCheckout(true);
-        return;
-      }
-
-      if (!isNoteUpload && voiceMemosCount >= 5) {
-        setLimitErrorMsg(settings.language === "es"
-          ? "¡Límite de audio alcanzado (5 de 5 notas guardadas)! Actualiza a Pro para grabar y transcribir notas ilimitadas."
-          : "Voice recording limit reached (5 of 5 memos saved)! Upgrade to Pro for unlimited Gemini transcription memory.");
-        setShowUpgradeCheckout(true);
-        return;
-      }
-    }
-
-    // Storage capacity check applies to both Free (10 MB = 10,240 KB) and Pro (1 GB = 1,048,576 KB)
-    const incomingKB = (getNoteTextSizeBytes(newNote) + getNoteAudioSizeBytes(newNote)) / 1024;
-    const maxKB = isPremium ? 1048576 : 10240;
-    const displayMaxStr = isPremium ? "1 GB" : "10 MB";
-
-    if (totalUsedKB + incomingKB > maxKB) {
+    // Combined note cap (voice notes + uploads together): Free 10, Pro 100.
+    const noteLimit = isPremium ? 100 : 10;
+    if (notes.length >= noteLimit) {
       setLimitErrorMsg(settings.language === "es"
-        ? `¡Base de datos cloud llena (límite de ${displayMaxStr} superado)! Actualiza a Pro para disfrutar de mayor capacidad.`
-        : `Cloud Database capacity limit full (${displayMaxStr} storage limit exceeded)! Upgrade to NoteWave Pro to secure 1 GB high-capacity vaults.`);
+        ? `¡Límite de notas alcanzado (${noteLimit} de ${noteLimit})! ${isPremium ? "Has alcanzado la capacidad máxima del plan Pro." : "Actualiza a Pro para guardar hasta 100 notas y documentos combinados."}`
+        : `Note limit reached (${noteLimit} of ${noteLimit})! ${isPremium ? "You've reached the maximum Pro capacity." : "Upgrade to Pro to store up to 100 combined notes and uploads."}`);
       if (!isPremium) {
         setShowUpgradeCheckout(true);
       }
       return;
+    }
+
+    // Storage capacity check — Pro only (1 GB). Free users are bounded by the
+    // note count cap above, so a separate MB cap is redundant for them.
+    if (isPremium) {
+      const voiceNotes = notes.filter(n => Array.isArray(n.tags) && !n.tags.includes("uploaded"));
+      const totalTextBytes = notes.reduce((acc, note) => acc + getNoteTextSizeBytes(note), 0);
+      const totalAudioBytes = voiceNotes.reduce((acc, note) => acc + getNoteAudioSizeBytes(note), 0);
+      const totalUsedKB = (totalTextBytes + totalAudioBytes) / 1024;
+      const incomingKB = (getNoteTextSizeBytes(newNote) + getNoteAudioSizeBytes(newNote)) / 1024;
+      const maxKB = 1048576;
+
+      if (totalUsedKB + incomingKB > maxKB) {
+        setLimitErrorMsg(settings.language === "es"
+          ? "¡Base de datos cloud llena (límite de 1 GB superado)!"
+          : "Cloud Database capacity limit full (1 GB storage limit exceeded)!");
+        return;
+      }
     }
 
     const updated = [newNote, ...notes];

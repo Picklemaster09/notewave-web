@@ -749,25 +749,18 @@ export default function SettingsPanel({
           <div id="settings-psection-data" className="flex flex-col gap-5">
             
             {/* Grid structure as in screenshots */}
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-slate-50/55 border border-[#E5E5EA] rounded-xl text-center select-none font-sans mt-1">
                 <span className="text-xl">📄</span>
                 <span className="text-sm font-black text-[#1C1C1E] block mt-1">{notes.length}</span>
-                <span className="text-[10px] text-gray-500 font-bold block">Notes</span>
-                <span className="text-[9px] text-gray-400 block font-mono">{notesTextKB.toFixed(2)} KB</span>
-              </div>
-
-              <div className="p-3 bg-slate-50/55 border border-[#E5E5EA] rounded-xl text-center select-none font-sans mt-1">
-                <span className="text-xl">🎙️</span>
-                <span className="text-sm font-black text-[#1C1C1E] block mt-1">{voiceMemosCount}</span>
-                <span className="text-[10px] text-gray-500 font-bold block">Voice Memos</span>
-                <span className="text-[9px] text-gray-400 block font-mono">{voiceAudioKB.toFixed(2)} KB</span>
+                <span className="text-[10px] text-gray-500 font-bold block">{langDict.language === "es" ? "Notas" : "Notes"}</span>
+                <span className="text-[9px] text-gray-400 block font-mono">{(notesTextKB + voiceAudioKB).toFixed(2)} KB</span>
               </div>
 
               <div className="p-3 bg-slate-50/55 border border-[#E5E5EA] rounded-xl text-center select-none font-sans mt-1">
                 <span className="text-xl font-sans">📤</span>
                 <span className="text-sm font-black text-[#1C1C1E] block mt-1">{uploadsCount}</span>
-                <span className="text-[10px] text-gray-500 font-bold block">Uploads</span>
+                <span className="text-[10px] text-gray-500 font-bold block">{langDict.language === "es" ? "Archivos" : "Uploads"}</span>
                 <span className="text-[9px] text-gray-400 block font-mono">{uploadKB.toFixed(2)} KB</span>
               </div>
             </div>
@@ -784,76 +777,59 @@ export default function SettingsPanel({
               </div>
 
               <div className="flex flex-col gap-3.5 text-xs">
-                {/* 1. Storage bytes capacity limit */}
-                <div className="flex flex-col gap-1.5">
-                  <div className="flex justify-between font-semibold">
-                    <span>{langDict.language === "es" ? "Base de Datos Cloud" : "Cloud Database"}</span>
-                    <span className="font-mono text-[11px] font-black text-gray-700">
-                      {(() => {
-                        const usedBytes = totalTextBytes + totalAudioBytes;
-                        const usedKB = usedBytes / 1024;
-                        let usedStr = "0.00 KB";
-                        if (usedKB >= 1024) {
-                          usedStr = `${(usedKB / 1024).toFixed(2)} MB`;
-                        } else {
-                          usedStr = `${usedKB.toFixed(2)} KB`;
-                        }
-                        const limitStr = settings.tier === "premium" ? "1 GB" : "10 MB";
-                        return `${usedStr} / ${limitStr}`;
-                      })()}
-                    </span>
-                  </div>
-                  <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full transition-all duration-300 ${
-                        ((totalTextBytes + totalAudioBytes) / 1024 / (settings.tier === "premium" ? 1048576 : 10240)) > 0.9 ? "bg-red-600" : ((totalTextBytes + totalAudioBytes) / 1024 / (settings.tier === "premium" ? 1048576 : 10240)) > 0.7 ? "bg-amber-500" : "bg-blue-600"
-                      }`}
-                      style={{ width: `${Math.min(100, Math.max(0, (((totalTextBytes + totalAudioBytes) / 1024) / (settings.tier === "premium" ? 1048576 : 10240)) * 100))}%` }}
-                    />
-                  </div>
-                </div>
+                {/* 1. Combined note quota (voice notes + uploads): Free 10, Pro 100 */}
+                {(() => {
+                  const noteCap = settings.tier === "premium" ? 100 : 10;
+                  const ratio = notes.length / noteCap;
+                  return (
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex justify-between font-semibold">
+                        <span>{langDict.language === "es" ? "Notas y Archivos" : "Notes & Uploads"}</span>
+                        <span className="font-mono text-[11px] font-black text-gray-700">
+                          {notes.length} / {noteCap}
+                        </span>
+                      </div>
+                      <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            ratio >= 1 ? "bg-red-650" : ratio > 0.8 ? "bg-amber-500" : "bg-blue-600"
+                          }`}
+                          style={{ width: `${Math.min(100, ratio * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })()}
 
-                {/* 2. Voice Memos limit */}
-                <div className="flex flex-col gap-1.5 border-t border-[#F2F2F7] pt-2.5">
-                  <div className="flex justify-between font-semibold">
-                    <span>{langDict.language === "es" ? "Grabaciones de voz" : "Voice Recordings"}</span>
-                    <span className="font-mono text-[11px] font-black text-gray-700">
-                      {voiceMemosCount} / {settings.tier === "premium" ? (langDict.language === "es" ? "Ilimitado" : "Unlimited") : "5"}
-                    </span>
+                {/* 2. Cloud Database byte capacity — Pro only (1 GB). Free has no MB cap. */}
+                {settings.tier === "premium" && (
+                  <div className="flex flex-col gap-1.5 border-t border-[#F2F2F7] pt-2.5">
+                    <div className="flex justify-between font-semibold">
+                      <span>{langDict.language === "es" ? "Base de Datos Cloud" : "Cloud Database"}</span>
+                      <span className="font-mono text-[11px] font-black text-gray-700">
+                        {(() => {
+                          const usedKB = (totalTextBytes + totalAudioBytes) / 1024;
+                          const usedStr = usedKB >= 1024 ? `${(usedKB / 1024).toFixed(2)} MB` : `${usedKB.toFixed(2)} KB`;
+                          return `${usedStr} / 1 GB`;
+                        })()}
+                      </span>
+                    </div>
+                    <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          ((totalTextBytes + totalAudioBytes) / 1024 / 1048576) > 0.9 ? "bg-red-600" : ((totalTextBytes + totalAudioBytes) / 1024 / 1048576) > 0.7 ? "bg-amber-500" : "bg-blue-600"
+                        }`}
+                        style={{ width: `${Math.min(100, Math.max(0, (((totalTextBytes + totalAudioBytes) / 1024) / 1048576) * 100))}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full transition-all duration-300 ${
-                        settings.tier === "premium" ? "" : (voiceMemosCount / 5) >= 1 ? "bg-red-650" : (voiceMemosCount / 5) > 0.8 ? "bg-amber-500" : "bg-blue-600"
-                      }`}
-                      style={{ width: `${settings.tier === "premium" ? 0 : Math.min(100, (voiceMemosCount / 5) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-
-                {/* 3. Upload Document Limit */}
-                <div className="flex flex-col gap-1.5 border-t border-[#F2F2F7] pt-2.5">
-                  <div className="flex justify-between font-semibold">
-                    <span>{langDict.language === "es" ? "Archivos cargados" : "Uploaded Files"}</span>
-                    <span className="font-mono text-[11px] font-black text-gray-700">
-                      {uploadsCount} / {settings.tier === "premium" ? (langDict.language === "es" ? "Ilimitado" : "Unlimited") : "3"}
-                    </span>
-                  </div>
-                  <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full transition-all duration-300 ${
-                        settings.tier === "premium" ? "" : (uploadsCount / 3) >= 1 ? "bg-red-650" : (uploadsCount / 3) > 0.8 ? "bg-amber-500" : "bg-blue-600"
-                      }`}
-                      style={{ width: `${settings.tier === "premium" ? 0 : Math.min(100, (uploadsCount / 3) * 100)}%` }}
-                    />
-                  </div>
-                </div>
+                )}
               </div>
 
               {settings.tier !== "premium" ? (
                 <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 flex flex-col gap-2 mt-1">
                   <p className="text-[10px] text-amber-800 font-semibold leading-relaxed">
-                    ⚠️ <strong>{langDict.language === "es" ? "Límites del Plan Libre Activos." : "Free Plan Account Storage Ceilings:"}</strong> {langDict.language === "es" ? "Actualiza a Pro para eliminar restricciones de audio y habilitar transcripción ilimitada en la nube con un límite de 1 GB de almacenamiento." : "Upgrade to Pro to lift voice storage restrictions and secure unlimited voice-to-text cloud model analysis with massive 1 GB hosting bounds."}
+                    ⚠️ <strong>{langDict.language === "es" ? "Límites del Plan Libre Activos." : "Free Plan Account Limits:"}</strong> {langDict.language === "es" ? "El plan gratuito permite hasta 10 notas y archivos combinados. Actualiza a Pro para 100 notas y 1 GB de almacenamiento seguro en la nube." : "The free plan allows up to 10 combined notes & uploads. Upgrade to Pro for 100 notes and 1 GB of secure cloud storage."}
                   </p>
                   <button
                     type="button"

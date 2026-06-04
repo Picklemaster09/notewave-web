@@ -33,6 +33,9 @@ export interface RecordingNote {
   audioBytes?: number; // size of the stored audio in bytes (for storage accounting)
   modelUsed: string;
   userId?: string;
+  // AI enrichment status for optimistic UI. Missing/"ready" = fully populated;
+  // "processing" = added instantly, awaiting the AI response; "failed" = AI errored.
+  status?: "processing" | "ready" | "failed";
 }
 
 export interface SettingsConfig {

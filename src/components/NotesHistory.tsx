@@ -291,14 +291,33 @@ function NoteCardInternal({
           </div>
 
           <div className="flex items-center gap-2 min-w-0">
-            {note.ideaName?.toLowerCase() === "idea" ? (
-              <Rocket className="w-4 h-4 text-blue-600 shrink-0" />
+            {note.status === "processing" ? (
+              <>
+                <Loader2 className="w-4 h-4 text-blue-600 shrink-0 animate-spin" />
+                <h4 className="text-sm font-bold text-blue-600 truncate pr-2 animate-pulse">
+                  {language === "es" ? "Esperando respuesta de IA…"
+                    : language === "fr" ? "En attente de l'IA…"
+                    : language === "de" ? "Warte auf KI-Antwort…"
+                    : language === "cs" ? "Čekání na odpověď AI…"
+                    : language === "sk" ? "Čaká sa na odpoveď AI…"
+                    : language === "ja" ? "AI応答を待っています…"
+                    : "Waiting for AI response…"}
+                </h4>
+              </>
             ) : (
-              <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+              <>
+                {note.status === "failed" ? (
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                ) : note.ideaName?.toLowerCase() === "idea" ? (
+                  <Rocket className="w-4 h-4 text-blue-600 shrink-0" />
+                ) : (
+                  <FileText className="w-4 h-4 text-amber-600 shrink-0" />
+                )}
+                <h4 className="text-sm font-bold text-[#1C1C1E] truncate pr-2">
+                  {note.title}
+                </h4>
+              </>
             )}
-            <h4 className="text-sm font-bold text-[#1C1C1E] truncate pr-2">
-              {note.title}
-            </h4>
           </div>
         </div>
 
@@ -497,17 +516,19 @@ interface NotesHistoryProps {
   notes: RecordingNote[];
   onDeleteNote: (id: string) => void;
   onToggleActionItem: (noteId: string, itemText: string, checked: boolean) => void;
-  onAddManualNote?: (newNote: RecordingNote) => void; 
+  onAddManualNote?: (newNote: RecordingNote) => Promise<boolean> | boolean;
+  onUpdateNote?: (id: string, patch: Partial<RecordingNote>) => void;
   language?: string;
   tier?: UserTier;
   customApiKey?: string;
 }
 
-export default function NotesHistory({ 
-  notes, 
-  onDeleteNote, 
-  onToggleActionItem, 
+export default function NotesHistory({
+  notes,
+  onDeleteNote,
+  onToggleActionItem,
   onAddManualNote,
+  onUpdateNote,
   language = "en",
   tier = "free",
   customApiKey = ""
@@ -620,23 +641,46 @@ export default function NotesHistory({
       parsedTags.push("Note", "Manual");
     }
 
-    // Prepare draft fallback in case of api failure / offline mode
-    const manualNoteDraft: RecordingNote = {
-      id: `manual_note_${Date.now()}`,
-      title: newNoteTitle.trim(),
+    const noteId = `manual_note_${Date.now()}`;
+    const title = newNoteTitle.trim();
+    const body = newNoteBody.trim();
+    const fallbackModel = tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+
+    // 1) Optimistic add — the user's title and body show instantly while the AI
+    // generates the summary, action items and sub-todos in the background.
+    const pendingNote: RecordingNote = {
+      id: noteId,
+      title,
       duration: 0,
       createdAt: new Date().toISOString(),
-      transcript: newNoteBody.trim(),
-      ideaSummary: `Brief: ${newNoteBody.trim().substring(0, 100)}...`,
+      transcript: body,
+      ideaSummary: `Brief: ${body.substring(0, 100)}...`,
       actionItems: "",
       category: "ideas",
       ideaName: newNoteType,
       scheduledDate: undefined,
       subTodos: [],
       tags: parsedTags,
-      modelUsed: "NoteWave Notebook"
+      modelUsed: "NoteWave Notebook",
+      status: "processing",
     };
 
+    const accepted = onAddManualNote ? await onAddManualNote(pendingNote) : true;
+    setIsProcessing(false);
+    if (!accepted) return; // plan limit hit; parent surfaces the message
+
+    // Reset + close the form right away.
+    setNewNoteTitle("");
+    setNewNoteBody("");
+    setNewNoteType("Note");
+    setNewNoteTags("");
+    setShowNewNoteForm(false);
+    triggerSuccess(language === "es"
+      ? "¡Nota añadida! Mejorándola con IA..."
+      : "Note added — enhancing it with AI...");
+
+    // 2) Enhance in the background. The note is already usable, so any failure
+    // just leaves the user's original content untouched.
     try {
       const response = await fetch(apiUrl("/api/analyze-text"), {
         method: "POST",
@@ -645,10 +689,10 @@ export default function NotesHistory({
           ...(await getAuthHeaders()),
         },
         body: JSON.stringify({
-          text: newNoteBody.trim(),
+          text: body,
           tier: tier,
           customApiKey: customApiKey || undefined,
-          filename: `Manual: ${newNoteTitle.trim().substring(0, 20)}`,
+          filename: `Manual: ${title.substring(0, 20)}`,
           language: language,
         }),
       });
@@ -656,71 +700,33 @@ export default function NotesHistory({
       const result = await response.json();
 
       if (!response.ok) {
-        // Fallback to draft note gracefully instead of hard failing
-        console.warn("Gemini enhancement failed, using local fallback draft:", result.message || "Unknown error");
-        if (onAddManualNote) {
-          onAddManualNote(manualNoteDraft);
-        }
-        triggerSuccess(language === "es"
-          ? "¡Nota guardada localmente! (Análisis de Gemini no disponible en este momento)"
-          : "Note saved locally as offline draft (Gemini analysis unavailable right now).");
-      } else {
-        const data = result.data;
-        const enhancedNote: RecordingNote = {
-          id: `manual_note_${Date.now()}`,
-          title: newNoteTitle.trim(), // Keep user's custom title
-          duration: 0,
-          createdAt: new Date().toISOString(),
-          transcript: newNoteBody.trim(),
-          ideaSummary: data.summaryText || `Brief: ${newNoteBody.trim().substring(0, 100)}...`,
-          actionItems: data.actionItems || "",
-          category: data.category || "ideas",
-          ideaName: data.ideaName || newNoteType,
-          scheduledDate: data.scheduledDate || undefined,
-          projectStartDate: data.projectStartDate || undefined,
-          isComplex: !!data.isComplex,
-          subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
-          tags: Array.from(new Set([
-            ...parsedTags,
-            ...(data.tags 
-              ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags) 
-              : ["manual"])
-          ])).filter(Boolean),
-          modelUsed: result.model || (tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite"),
-        };
-
-        if (onAddManualNote) {
-          onAddManualNote(enhancedNote);
-        }
-        triggerSuccess(language === "es"
-          ? "¡Nota procesada por IA y guardada con éxito!"
-          : "AI-enhanced Note successfully captured with dynamic checklists & insights!");
+        console.warn("Gemini enhancement failed, keeping manual draft:", result.message || "Unknown error");
+        onUpdateNote?.(noteId, { status: "ready" });
+        return;
       }
 
-      // Reset Form on full success/graceful fallback
-      setNewNoteTitle("");
-      setNewNoteBody("");
-      setNewNoteType("Note");
-      setNewNoteTags("");
-      setShowNewNoteForm(false);
-
+      const data = result.data;
+      onUpdateNote?.(noteId, {
+        ideaSummary: data.summaryText || `Brief: ${body.substring(0, 100)}...`,
+        actionItems: data.actionItems || "",
+        category: data.category || "ideas",
+        ideaName: data.ideaName || newNoteType,
+        scheduledDate: data.scheduledDate || undefined,
+        projectStartDate: data.projectStartDate || undefined,
+        isComplex: !!data.isComplex,
+        subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
+        tags: Array.from(new Set([
+          ...parsedTags,
+          ...(data.tags
+            ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags)
+            : ["manual"])
+        ])).filter(Boolean),
+        modelUsed: result.model || fallbackModel,
+        status: "ready",
+      });
     } catch (e) {
-      console.error("Analysis API network error, falling back:", e);
-      // Fallback to draft note gracefully
-      if (onAddManualNote) {
-        onAddManualNote(manualNoteDraft);
-      }
-      triggerSuccess(language === "es"
-        ? "¡Nota guardada localmente! (Modo fuera de línea)"
-        : "Note captured successfully in offline draft mode!");
-      
-      setNewNoteTitle("");
-      setNewNoteBody("");
-      setNewNoteType("Note");
-      setNewNoteTags("");
-      setShowNewNoteForm(false);
-    } finally {
-      setIsProcessing(false);
+      console.error("Analysis API network error, keeping manual draft:", e);
+      onUpdateNote?.(noteId, { status: "ready" });
     }
   };
 

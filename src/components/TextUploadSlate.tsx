@@ -6,7 +6,10 @@ import { apiUrl } from "../config";
 import { getAuthHeaders } from "../supabase";
 
 interface TextUploadSlateProps {
-  onUploadComplete: (note: RecordingNote) => void;
+  // Adds the note immediately; resolves true if accepted (passed plan limits).
+  onUploadComplete: (note: RecordingNote) => Promise<boolean> | boolean;
+  // Fills in / updates a note once the AI response arrives.
+  onUpdateNote: (id: string, patch: Partial<RecordingNote>) => void;
   tier: UserTier;
   customApiKey: string;
   language?: string;
@@ -14,6 +17,7 @@ interface TextUploadSlateProps {
 
 export default function TextUploadSlate({
   onUploadComplete,
+  onUpdateNote,
   tier,
   customApiKey,
   language = "en",
@@ -39,6 +43,32 @@ export default function TextUploadSlate({
     const wordCount = textToProcess.trim().split(/\s+/).length;
     const estimatedDuration = Math.max(5, Math.ceil((wordCount / 140) * 60));
 
+    // 1) Optimistic add — the raw text is already useful, so show it instantly
+    // while the AI generates the title, summary and action items.
+    const noteId = "note_" + Date.now();
+    const fallbackModel = tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+    const pendingNote: RecordingNote = {
+      id: noteId,
+      title: `Indexed: ${sourceName}`,
+      duration: estimatedDuration,
+      createdAt: new Date().toISOString(),
+      transcript: textToProcess,
+      ideaSummary: "",
+      actionItems: "",
+      category: "ideas",
+      subTodos: [],
+      tags: ["document", "uploaded"],
+      modelUsed: fallbackModel,
+      status: "processing",
+    };
+
+    const accepted = await onUploadComplete(pendingNote);
+    setIsProcessing(false);
+    if (!accepted) return; // plan limit hit; parent surfaces the message
+    setPasteText("");
+    setFilename(null);
+
+    // 2) Analyze in the background and patch the note when it returns.
     try {
       const response = await fetch(apiUrl("/api/analyze-text"), {
         method: "POST",
@@ -58,23 +88,14 @@ export default function TextUploadSlate({
       const result = await response.json();
 
       if (!response.ok) {
-        if (result.error === "RATE_LIMIT_EXCEEDED") {
-          setErrorText(result.message);
-        } else if (result.error === "INVALID_CREDENTIALS") {
-          setErrorText("Invalid API key configured. Please double check your personal credentials in Settings.");
-        } else {
-          setErrorText(result.message || "Unable to analyze document text. Please try again.");
-        }
-        setIsProcessing(false);
+        // The user's raw text is preserved; just mark the AI enrichment failed.
+        onUpdateNote(noteId, { status: "failed" });
         return;
       }
 
       const data = result.data;
-      const newNote: RecordingNote = {
-        id: "note_" + Date.now(),
+      onUpdateNote(noteId, {
         title: data.headlineTitle || `Indexed: ${sourceName}`,
-        duration: estimatedDuration,
-        createdAt: new Date().toISOString(),
         transcript: data.transcript || textToProcess,
         ideaSummary: data.summaryText || "No conceptual tags.",
         actionItems: data.actionItems || "",
@@ -84,21 +105,15 @@ export default function TextUploadSlate({
         projectStartDate: data.projectStartDate || "",
         isComplex: !!data.isComplex,
         subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
-        tags: (data.tags 
-          ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags) 
+        tags: (data.tags
+          ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags)
           : ["document"]).concat("uploaded"),
-        modelUsed: result.model || (tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite"),
-      };
-
-      onUploadComplete(newNote);
-      setPasteText("");
-      setFilename(null);
-
+        modelUsed: result.model || fallbackModel,
+        status: "ready",
+      });
     } catch (e) {
       console.error("Analysis API network error:", e);
-      setErrorText("Server connection timeout. Ensure standard development server is active.");
-    } finally {
-      setIsProcessing(false);
+      onUpdateNote(noteId, { status: "failed" });
     }
   };
 

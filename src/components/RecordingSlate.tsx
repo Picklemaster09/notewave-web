@@ -8,7 +8,10 @@ import { apiUrl } from "../config";
 import { getAuthHeaders } from "../supabase";
 
 interface RecordingSlateProps {
-  onRecordingComplete: (note: RecordingNote) => void;
+  // Adds the note immediately; resolves true if accepted (passed plan limits).
+  onRecordingComplete: (note: RecordingNote) => Promise<boolean> | boolean;
+  // Fills in / updates a note once the AI response arrives.
+  onUpdateNote: (id: string, patch: Partial<RecordingNote>) => void;
   tier: UserTier;
   customApiKey: string;
   isTriggeredByActionBtn: boolean;
@@ -18,6 +21,7 @@ interface RecordingSlateProps {
 
 export default function RecordingSlate({
   onRecordingComplete,
+  onUpdateNote,
   tier,
   customApiKey,
   isTriggeredByActionBtn,
@@ -120,10 +124,11 @@ export default function RecordingSlate({
     }
   };
 
-  // Convert audio blob to base64 and fire Gemini cloud transcribers
+  // Add the note instantly with what we know, then fill in the AI fields in the
+  // background so the recorder is immediately free for the next memo.
   const processRecordingData = async () => {
-    setIsProcessing(true);
     setErrorText(null);
+    setIsProcessing(true);
 
     const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
     const duration = recordingSeconds || 1; // Safely set min duration 1s
@@ -134,86 +139,108 @@ export default function RecordingSlate({
       return;
     }
 
+    // Read the blob to base64 (used both for the upload and instant playback).
+    let base64Data: string;
     try {
-      // Convert Blob to base64
-      const reader = new FileReader();
-      reader.readAsDataURL(audioBlob);
-      reader.onloadend = async () => {
-        const base64Data = reader.result as string;
-
-        try {
-          const response = await fetch(apiUrl("/api/transcribe"), {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...(await getAuthHeaders()),
-            },
-            body: JSON.stringify({
-              audio: base64Data,
-              tier: tier,
-              customApiKey: customApiKey || undefined,
-              language: language,
-            }),
-          });
-
-          const result = await response.json();
-
-          if (!response.ok) {
-            if (result.error === "RATE_LIMIT_EXCEEDED") {
-              setErrorText(result.message);
-            } else if (result.error === "STORAGE_LIMIT_EXCEEDED") {
-              setErrorText(
-                tier === "premium"
-                  ? result.message || "Audio storage is full. Delete some voice memos to free up space."
-                  : "Audio storage full on the free plan. Delete some memos or upgrade to Pro for more space."
-              );
-            } else if (result.error === "INVALID_CREDENTIALS") {
-              setErrorText("Invalid API key configured. Please double check your personal credentials in Settings.");
-            } else {
-              setErrorText(result.message || "Unable to transcribe notes. Please try again.");
-            }
-            setIsProcessing(false);
-            return;
-          }
-
-          // Build a successful Note record entry
-          const data = result.data;
-          const newNote: RecordingNote = {
-            id: "note_" + Date.now(),
-            title: data.headlineTitle || "Voice Recording note",
-            duration: duration,
-            createdAt: new Date().toISOString(),
-            transcript: data.transcript || "No words transcribed.",
-            ideaSummary: data.summaryText || "No conceptual tags.",
-            actionItems: data.actionItems || "",
-            category: data.category || "ideas",
-            ideaName: data.ideaName || "",
-            scheduledDate: data.scheduledDate || "",
-            projectStartDate: data.projectStartDate || "",
-            isComplex: !!data.isComplex,
-            subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
-            tags: (data.tags ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags) : ["audio"]).concat("voice"),
-            modelUsed: result.model || (tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite"),
-            // Audio now lives in R2 (returned as audioKey); fall back to inline
-            // base64 only if the backend's object storage was unavailable.
-            audioKey: result.audioKey || undefined,
-            audioData: result.audioKey ? undefined : base64Data,
-            audioBytes: result.audioBytes || audioBlob.size,
-          };
-
-          onRecordingComplete(newNote);
-
-        } catch (e) {
-          console.error("Transcription API network error:", e);
-          setErrorText("Server Connection timeout. Ensure development server is configured.");
-        } finally {
-          setIsProcessing(false);
-        }
-      };
+      base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(audioBlob);
+      });
     } catch (e) {
       console.error("Audio recording parsing failed:", e);
       setErrorText("Error decoding recorded voice tracks.");
       setIsProcessing(false);
+      return;
+    }
+
+    // 1) Optimistic add — appears in history right away as "processing".
+    const noteId = "note_" + Date.now();
+    const fallbackModel = tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+    const pendingNote: RecordingNote = {
+      id: noteId,
+      title: "",
+      duration,
+      createdAt: new Date().toISOString(),
+      transcript: "",
+      ideaSummary: "",
+      actionItems: "",
+      category: "ideas",
+      subTodos: [],
+      tags: ["voice"],
+      audioData: base64Data, // instant local playback while the AI works
+      audioBytes: audioBlob.size,
+      modelUsed: fallbackModel,
+      status: "processing",
+    };
+
+    const accepted = await onRecordingComplete(pendingNote);
+    // Recorder is free again the moment the note is on screen.
+    setIsProcessing(false);
+    if (!accepted) return; // plan limit hit; parent surfaces the message
+
+    // 2) Transcribe in the background and patch the note when it returns.
+    try {
+      const response = await fetch(apiUrl("/api/transcribe"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(await getAuthHeaders()),
+        },
+        body: JSON.stringify({
+          audio: base64Data,
+          tier: tier,
+          customApiKey: customApiKey || undefined,
+          language: language,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        if (result.error === "RATE_LIMIT_EXCEEDED") {
+          setErrorText(result.message);
+        } else if (result.error === "STORAGE_LIMIT_EXCEEDED") {
+          setErrorText(
+            tier === "premium"
+              ? result.message || "Audio storage is full. Delete some voice memos to free up space."
+              : "Audio storage full on the free plan. Delete some memos or upgrade to Pro for more space."
+          );
+        } else if (result.error === "INVALID_CREDENTIALS") {
+          setErrorText("Invalid API key configured. Please double check your personal credentials in Settings.");
+        } else {
+          setErrorText(result.message || "Unable to transcribe notes. Please try again.");
+        }
+        onUpdateNote(noteId, { status: "failed", title: "Transcription failed" });
+        return;
+      }
+
+      const data = result.data;
+      onUpdateNote(noteId, {
+        title: data.headlineTitle || "Voice Recording note",
+        transcript: data.transcript || "No words transcribed.",
+        ideaSummary: data.summaryText || "No conceptual tags.",
+        actionItems: data.actionItems || "",
+        category: data.category || "ideas",
+        ideaName: data.ideaName || "",
+        scheduledDate: data.scheduledDate || "",
+        projectStartDate: data.projectStartDate || "",
+        isComplex: !!data.isComplex,
+        subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
+        tags: (data.tags ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags) : ["audio"]).concat("voice"),
+        modelUsed: result.model || fallbackModel,
+        // Audio now lives in R2 (returned as audioKey); fall back to inline
+        // base64 only if the backend's object storage was unavailable.
+        audioKey: result.audioKey || undefined,
+        audioData: result.audioKey ? undefined : base64Data,
+        audioBytes: result.audioBytes || audioBlob.size,
+        status: "ready",
+      });
+    } catch (e) {
+      console.error("Transcription API network error:", e);
+      setErrorText("Server Connection timeout. Ensure development server is configured.");
+      onUpdateNote(noteId, { status: "failed", title: "Transcription failed" });
     }
   };
 

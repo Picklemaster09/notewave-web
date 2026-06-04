@@ -268,6 +268,9 @@ export default function App() {
           ...note,
           category: note.category || "ideas",
           subTodos: Array.isArray(note.subTodos) ? note.subTodos : [],
+          // A note left "processing" means the app closed mid-request — its
+          // in-flight AI call is gone, so settle it rather than spin forever.
+          status: note.status === "processing" ? "failed" : note.status,
         })) : [];
         setNotes(normalized);
       }
@@ -419,10 +422,12 @@ export default function App() {
     return Math.round(base64Data.length * 0.75);
   };
 
-  // Add recorded note track
-  const handleAddNewNote = async (newNote: RecordingNote) => {
+  // Add recorded note track. Returns true if the note was accepted (passed the
+  // plan limits) and added, false if it was rejected — callers use this to
+  // decide whether to fire the follow-up AI request for an optimistic note.
+  const handleAddNewNote = async (newNote: RecordingNote): Promise<boolean> => {
     const isPremium = settings.tier === "premium";
-    
+
     // Combined note cap (voice notes + uploads together): Free 10, Pro 100.
     const noteLimit = isPremium ? 100 : 10;
     if (notes.length >= noteLimit) {
@@ -432,7 +437,7 @@ export default function App() {
       if (!isPremium) {
         setShowUpgradeCheckout(true);
       }
-      return;
+      return false;
     }
 
     // Combined storage capacity check (voice memos + uploads + notes): Free 5 MB,
@@ -452,21 +457,38 @@ export default function App() {
         if (!isPremium) {
           setShowUpgradeCheckout(true);
         }
-        return;
+        return false;
       }
     }
 
     const updated = [newNote, ...notes];
     saveNotesLocally(updated);
 
-    // Save synchronously to cloud if logged in
-    if (currentUser) {
+    // Skip cloud sync for in-flight optimistic notes — they're synced once the
+    // AI fills them in via updateNote, so we don't push half-empty records.
+    if (currentUser && newNote.status !== "processing") {
       try {
         await supabaseSaveNotes(currentUser.uid, updated);
       } catch (err) {
         console.error("Direct cloud save failed, queued locally:", err);
       }
     }
+    return true;
+  };
+
+  // Merge AI results into an already-displayed optimistic note. Persists locally
+  // and (once no longer processing) syncs the completed note to the cloud.
+  const updateNote = (id: string, patch: Partial<RecordingNote>) => {
+    setNotes((prev) => {
+      const updated = prev.map((n) => (n.id === id ? { ...n, ...patch } : n));
+      localStorage.setItem(LOCAL_STORAGE_NOTES_KEY, JSON.stringify(updated));
+      if (currentUser && patch.status !== "processing") {
+        supabaseSaveNotes(currentUser.uid, updated).catch((err) =>
+          console.error("Cloud update sync failed, kept locally:", err)
+        );
+      }
+      return updated;
+    });
   };
 
   // Handle note deletion
@@ -789,6 +811,7 @@ export default function App() {
                   {inputMode === "voice" ? (
                     <RecordingSlate
                       onRecordingComplete={handleAddNewNote}
+                      onUpdateNote={updateNote}
                       tier={settings.tier}
                       customApiKey={settings.customApiKey}
                       isTriggeredByActionBtn={triggerRecord}
@@ -797,10 +820,12 @@ export default function App() {
                     />
                   ) : (
                     <TextUploadSlate
-                      onUploadComplete={(newNote) => {
-                        handleAddNewNote(newNote);
-                        setActiveTab("history"); // Instantly switch to history log to explore indexed deliverables!
+                      onUploadComplete={async (newNote) => {
+                        const ok = await handleAddNewNote(newNote);
+                        if (ok) setActiveTab("history"); // Jump to history to watch it fill in
+                        return ok;
                       }}
+                      onUpdateNote={updateNote}
                       tier={settings.tier}
                       customApiKey={settings.customApiKey}
                       language={settings.language}
@@ -819,6 +844,7 @@ export default function App() {
                   onDeleteNote={handleDeleteNote}
                   onToggleActionItem={handleToggleActionItem}
                   onAddManualNote={handleAddNewNote}
+                  onUpdateNote={updateNote}
                   language={settings.language}
                   tier={settings.tier}
                   customApiKey={settings.customApiKey}

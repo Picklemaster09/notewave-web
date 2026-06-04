@@ -67,19 +67,28 @@ export default function RecordingSlate({
     setRecordingSeconds(0);
 
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Mono + noise suppression: cleaner speech and roughly half the data.
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true },
+      });
       setAudioStream(stream);
 
-      // Support common file formats natively (WebM / Ogg / MP4 depending on browser compatibility)
-      let options = { mimeType: "audio/webm" };
-      if (!MediaRecorder.isTypeSupported("audio/webm")) {
-        options = { mimeType: "audio/ogg" };
-      }
-      if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-        options = { mimeType: "" }; // default fallback
-      }
+      // Opus in WebM is the best voice codec: tiny files with excellent speech
+      // quality, and accepted as-is by both Gemini and OpenAI transcription, so
+      // nothing is transcoded. Fall back through Ogg/Opus then container defaults.
+      const preferredTypes = [
+        "audio/webm;codecs=opus",
+        "audio/ogg;codecs=opus",
+        "audio/webm",
+        "audio/ogg",
+      ];
+      const mimeType = preferredTypes.find((t) => MediaRecorder.isTypeSupported(t)) || "";
 
-      const recorder = new MediaRecorder(stream, options);
+      // ~32 kbps mono Opus is the sweet spot for voice — light yet clear.
+      const recorder = new MediaRecorder(
+        stream,
+        mimeType ? { mimeType, audioBitsPerSecond: 32000 } : {}
+      );
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (event) => {
@@ -130,7 +139,9 @@ export default function RecordingSlate({
     setErrorText(null);
     setIsProcessing(true);
 
-    const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
+    // Use the recorder's real mime so the codec is labelled correctly end-to-end.
+    const recordedMime = mediaRecorderRef.current?.mimeType || "audio/webm";
+    const audioBlob = new Blob(audioChunksRef.current, { type: recordedMime });
     const duration = recordingSeconds || 1; // Safely set min duration 1s
 
     if (audioBlob.size < 100) {

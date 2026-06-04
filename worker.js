@@ -15,7 +15,9 @@
  *     Plaintext vars: AUTH0_DOMAIN, AUTH0_AUDIENCE, ALLOWED_ORIGIN,
  *                     GEMINI_MODEL, SUPABASE_URL
  *     Secrets:        GEMINI_API_KEY, SUPABASE_SERVICE_ROLE_KEY
+ *                     OPENAI_API_KEY (optional — fallback when Gemini is overloaded)
  *   (Optional) KV binding named RATE_LIMIT for real rate limiting.
+ *   (Optional) R2 bucket binding named AUDIO for voice-memo storage.
  *   Settings -> Domains & Routes: add custom domain napi.ccma-fetch.space
  */
 
@@ -196,29 +198,91 @@ function planLimit(plan) {
 function geminiModel(env) {
   return env.GEMINI_MODEL || "gemini-3.5-flash";
 }
-async function geminiGenerate(env, parts, jsonMode) {
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Transient server-side statuses worth retrying; 503 is Gemini's "model
+// overloaded". 429 (quota) and 4xx (bad request) are NOT retried.
+const GEMINI_RETRYABLE = new Set([500, 502, 503, 504]);
+async function geminiGenerate(env, parts, jsonMode, { retries = 2, baseDelayMs = 600 } = {}) {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel(
     env
   )}:generateContent?key=${env.GEMINI_API_KEY}`;
   const body = { contents: [{ parts }] };
   if (jsonMode)
     body.generationConfig = { responseMimeType: "application/json" };
-  const res = await fetch(url, {
+
+  let lastStatus = 0;
+  let lastText = "";
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      return (
+        data?.candidates?.[0]?.content?.parts
+          ?.map((p) => p.text || "")
+          .join("") || ""
+      );
+    }
+    lastStatus = res.status;
+    lastText = await res.text();
+    if (!GEMINI_RETRYABLE.has(res.status)) break; // non-transient, stop early
+    if (attempt < retries) await sleep(baseDelayMs * 2 ** attempt); // backoff
+  }
+  // Tag transient/overload failures so callers can fall back to OpenAI.
+  const err = new Error(`Gemini ${lastStatus}: ${lastText.slice(0, 300)}`);
+  if (GEMINI_RETRYABLE.has(lastStatus)) err.overloaded = true;
+  throw err;
+}
+
+// ---------- OpenAI fallback (used only when Gemini is overloaded) ----------
+const canFallback = (env, e) => !!(e && e.overloaded && env.OPENAI_API_KEY);
+// Single-prompt text generation via gpt-4o-mini. jsonMode uses response_format;
+// the structured prompt already contains the word "JSON" as OpenAI requires.
+async function openaiText(env, prompt, jsonMode) {
+  const body = {
+    model: "gpt-4o-mini",
+    messages: [{ role: "user", content: prompt }],
+  };
+  if (jsonMode) body.response_format = { type: "json_object" };
+  const res = await fetch("https://api.openai.com/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${env.OPENAI_API_KEY}`,
+    },
     body: JSON.stringify(body),
   });
   if (!res.ok) {
     const t = await res.text();
-    throw new Error(`Gemini ${res.status}: ${t.slice(0, 300)}`);
+    throw new Error(`OpenAI ${res.status}: ${t.slice(0, 300)}`);
   }
   const data = await res.json();
-  return (
-    data?.candidates?.[0]?.content?.parts
-      ?.map((p) => p.text || "")
-      .join("") || ""
-  );
+  return data?.choices?.[0]?.message?.content || "";
 }
+// Speech-to-text via gpt-4o-mini-transcribe (accepts webm/ogg, unlike the chat
+// audio API). Returns the raw transcript text.
+async function openaiTranscribe(env, base64, mime) {
+  const bytes = b64urlToBytes(base64);
+  const ext = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "mp4" : mime.includes("wav") ? "wav" : "webm";
+  const form = new FormData();
+  form.append("file", new Blob([bytes], { type: mime }), `audio.${ext}`);
+  form.append("model", "gpt-4o-mini-transcribe");
+  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
+    body: form,
+  });
+  if (!res.ok) {
+    const t = await res.text();
+    throw new Error(`OpenAI transcribe ${res.status}: ${t.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  return data?.text || "";
+}
+
 function structuredPrompt(sourceClause) {
   return `${sourceClause}
 All text values you generate MUST be in the same primary language detected in the input.
@@ -388,14 +452,28 @@ async function handleTranscribe(env, req, claims) {
       );
   }
   try {
-    const out = await geminiGenerate(
-      env,
-      [
-        { inlineData: { data: base64, mimeType: mime } },
-        { text: structuredPrompt("Analyze this audio note and transcribe it.") },
-      ],
-      true
-    );
+    let out;
+    let usedModel = geminiModel(env);
+    try {
+      out = await geminiGenerate(
+        env,
+        [
+          { inlineData: { data: base64, mimeType: mime } },
+          { text: structuredPrompt("Analyze this audio note and transcribe it.") },
+        ],
+        true
+      );
+    } catch (e) {
+      if (!canFallback(env, e)) throw e;
+      // Gemini overloaded → transcribe with OpenAI, then structure the text.
+      const transcript = await openaiTranscribe(env, base64, mime);
+      out = await openaiText(
+        env,
+        `${structuredPrompt("Analyze the following transcribed voice note:")}\n\nINPUT TEXT:\n"""\n${transcript}\n"""`,
+        true
+      );
+      usedModel = "gpt-4o-mini";
+    }
     // Persist the source audio to R2 object storage (free egress) so it can be
     // played back across devices. Keyed by the verified token sub so ownership
     // is checkable on playback without a DB lookup. Best-effort: a storage
@@ -419,7 +497,7 @@ async function handleTranscribe(env, req, claims) {
     return json(env, req, {
       success: true,
       data: normalizeSubTodos(safeParse(out, "")),
-      model: geminiModel(env),
+      model: usedModel,
       audioKey,
       audioBytes,
     });
@@ -439,24 +517,25 @@ async function handleAnalyzeText(env, req, claims) {
       { error: "RATE_LIMIT_EXCEEDED", message: "Daily limit reached." },
       429
     );
+  const analyzePrompt = `${structuredPrompt(
+    "Analyze the following note text:"
+  )}\n\nINPUT TEXT:\n"""\n${b.text}\n"""`;
   try {
-    const out = await geminiGenerate(
-      env,
-      [
-        {
-          text: `${structuredPrompt(
-            "Analyze the following note text:"
-          )}\n\nINPUT TEXT:\n"""\n${b.text}\n"""`,
-        },
-      ],
-      true
-    );
+    let out;
+    let usedModel = geminiModel(env);
+    try {
+      out = await geminiGenerate(env, [{ text: analyzePrompt }], true);
+    } catch (e) {
+      if (!canFallback(env, e)) throw e;
+      out = await openaiText(env, analyzePrompt, true);
+      usedModel = "gpt-4o-mini";
+    }
     const parsed = normalizeSubTodos(safeParse(out, b.text));
     if (!parsed.transcript) parsed.transcript = b.text;
     return json(env, req, {
       success: true,
       data: parsed,
-      model: geminiModel(env),
+      model: usedModel,
     });
   } catch (e) {
     return json(env, req, { error: "AI_ERROR", message: e.message }, 502);
@@ -490,10 +569,14 @@ async function handleAiAgent(env, req, claims) {
     context || "(no notes yet)"
   }\n\nCONVERSATION:\n${convo}\n\nAssistant:`;
   try {
-    return json(env, req, {
-      success: true,
-      reply: await geminiGenerate(env, [{ text: prompt }], false),
-    });
+    let reply;
+    try {
+      reply = await geminiGenerate(env, [{ text: prompt }], false);
+    } catch (e) {
+      if (!canFallback(env, e)) throw e;
+      reply = await openaiText(env, prompt, false);
+    }
+    return json(env, req, { success: true, reply });
   } catch (e) {
     return json(env, req, { error: "AI_ERROR", message: e.message }, 502);
   }

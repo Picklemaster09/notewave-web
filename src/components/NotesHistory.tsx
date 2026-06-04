@@ -198,7 +198,7 @@ function NoteCardInternal({
   const wordCount = note.transcript ? note.transcript.trim().split(/\s+/).filter(Boolean).length : 0;
 
   const getNoteTypeLabel = () => {
-    const isVoice = !!note.audioData;
+    const isVoice = !!(note.audioKey || note.audioData);
     switch (language) {
       case "es":
         return isVoice ? "Nota de voz" : "Nota escrita";
@@ -254,7 +254,7 @@ function NoteCardInternal({
             <Calendar className="w-3 h-3 text-gray-450" />
             <span>{new Date(note.createdAt).toLocaleDateString()}</span>
             
-            {note.audioData && (
+            {(note.audioKey || note.audioData) && (
               <>
                 <span className="text-gray-300">•</span>
                 <Clock className="w-3 h-3 text-gray-450" />
@@ -304,7 +304,7 @@ function NoteCardInternal({
 
         {/* Audio Controls */}
         <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-          {note.audioData && (
+          {(note.audioKey || note.audioData) && (
             <button
               onClick={() => onPlayAudio(note)}
               className={`p-2.5 rounded-xl transition-all border cursor-pointer ${
@@ -460,7 +460,7 @@ function NoteCardInternal({
             {/* Speech transcript */}
             <div className="flex flex-col gap-1.5">
               <div className="text-[10px] font-mono text-gray-400 font-bold uppercase flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5 text-gray-400" /> {note.audioData ? "Speech transcript:" : "Written content notes:"}
+                <FileText className="w-3.5 h-3.5 text-gray-400" /> {(note.audioKey || note.audioData) ? "Speech transcript:" : "Written content notes:"}
               </div>
               <div className="p-4 rounded-xl bg-slate-50 border border-[#E5E5EA] text-xs text-gray-650 leading-relaxed font-semibold">
                 <MarkdownViewer content={note.transcript} />
@@ -549,9 +549,28 @@ export default function NotesHistory({
     return `${m}m ${s}s`;
   };
 
+  // Resolve a playable source: legacy notes embed base64; cloud notes stream
+  // from R2 via the authed /api/audio route. A bearer token can't ride on an
+  // <audio src>, so fetch the blob and hand back an object URL instead.
+  const resolveAudioSrc = async (note: RecordingNote): Promise<string | null> => {
+    if (note.audioKey) {
+      try {
+        const res = await fetch(apiUrl(`/api/audio?key=${encodeURIComponent(note.audioKey)}`), {
+          headers: { ...(await getAuthHeaders()) },
+        });
+        if (!res.ok) throw new Error(`audio ${res.status}`);
+        return URL.createObjectURL(await res.blob());
+      } catch (err) {
+        console.error("Audio fetch failed:", err);
+        return null;
+      }
+    }
+    return note.audioData || null;
+  };
+
   // Playback handler
-  const handlePlayAudio = (note: RecordingNote) => {
-    if (!note.audioData) return;
+  const handlePlayAudio = async (note: RecordingNote) => {
+    if (!note.audioKey && !note.audioData) return;
     if (playingId === note.id) {
       audioPlayersRef.current[note.id]?.pause();
       setPlayingId(null);
@@ -561,7 +580,9 @@ export default function NotesHistory({
       audioPlayersRef.current[playingId].pause();
     }
     if (!audioPlayersRef.current[note.id]) {
-      const audio = new Audio(note.audioData);
+      const src = await resolveAudioSrc(note);
+      if (!src) return;
+      const audio = new Audio(src);
       audio.onended = () => {
         setPlayingId(null);
       };

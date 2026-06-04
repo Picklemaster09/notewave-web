@@ -303,6 +303,7 @@ function noteToDb(n, userId) {
     tags: n.tags || [],
     model_used: n.modelUsed || "gemini",
     duration: Math.round(Number(n.duration || 0)),
+    audio_key: n.audioKey || null,
     created_at: n.createdAt || new Date().toISOString(),
   };
 }
@@ -323,6 +324,7 @@ function noteToClient(r) {
     tags: r.tags || [],
     modelUsed: r.model_used,
     duration: r.duration || 0,
+    audioKey: r.audio_key || null,
     createdAt: r.created_at,
   };
 }
@@ -353,10 +355,27 @@ async function handleTranscribe(env, req, claims) {
       ],
       true
     );
+    // Persist the source audio to R2 object storage (free egress) so it can be
+    // played back across devices. Keyed by the verified token sub so ownership
+    // is checkable on playback without a DB lookup. Best-effort: a storage
+    // failure must never block returning the transcription.
+    let audioKey = null;
+    if (env.AUDIO) {
+      try {
+        const ext = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "m4a" : "webm";
+        audioKey = `${claims.sub}/${crypto.randomUUID()}.${ext}`;
+        await env.AUDIO.put(audioKey, b64urlToBytes(base64), {
+          httpMetadata: { contentType: mime },
+        });
+      } catch {
+        audioKey = null;
+      }
+    }
     return json(env, req, {
       success: true,
       data: normalizeSubTodos(safeParse(out, "")),
       model: geminiModel(env),
+      audioKey,
     });
   } catch (e) {
     return json(env, req, { error: "AI_ERROR", message: e.message }, 502);
@@ -479,6 +498,17 @@ async function handleSyncNotes(env, req, claims) {
 }
 async function handleDeleteNote(env, req, claims, id) {
   const userId = await resolveUserId(env, claims.sub, claims.email);
+  // Remove the backing audio object first so deletes don't orphan R2 blobs.
+  if (env.AUDIO) {
+    try {
+      const sel = await sb(
+        env,
+        `notes?id=eq.${encodeURIComponent(id)}&user_id=eq.${userId}&select=audio_key`
+      );
+      const key = ((await sel.json()) || [])[0]?.audio_key;
+      if (key) await env.AUDIO.delete(key);
+    } catch {}
+  }
   await sb(
     env,
     `notes?id=eq.${encodeURIComponent(id)}&user_id=eq.${userId}`,
@@ -488,8 +518,32 @@ async function handleDeleteNote(env, req, claims, id) {
 }
 async function handleDeleteAllNotes(env, req, claims) {
   const userId = await resolveUserId(env, claims.sub, claims.email);
+  // Purge every audio object under this user's prefix.
+  if (env.AUDIO) {
+    try {
+      const listed = await env.AUDIO.list({ prefix: `${claims.sub}/` });
+      if (listed?.objects?.length)
+        await Promise.all(listed.objects.map((o) => env.AUDIO.delete(o.key)));
+    } catch {}
+  }
   await sb(env, `notes?user_id=eq.${userId}`, { method: "DELETE" });
   return json(env, req, { success: true });
+}
+async function handleGetAudio(env, req, claims) {
+  const key = new URL(req.url).searchParams.get("key") || "";
+  // Keys are prefixed with the owner's verified token sub — enforce ownership.
+  if (!key || !key.startsWith(`${claims.sub}/`))
+    return json(env, req, { error: "forbidden" }, 403);
+  if (!env.AUDIO) return json(env, req, { error: "storage_unavailable" }, 503);
+  const obj = await env.AUDIO.get(key);
+  if (!obj) return json(env, req, { error: "not_found" }, 404);
+  return new Response(obj.body, {
+    headers: {
+      "Content-Type": obj.httpMetadata?.contentType || "audio/webm",
+      "Cache-Control": "private, max-age=3600",
+      ...corsHeaders(env, req),
+    },
+  });
 }
 async function handleSaveSettings(env, req, claims) {
   const b = await req.json().catch(() => ({}));
@@ -549,6 +603,8 @@ export default {
         return handleAiAgent(env, req, requireAuth());
       if (path === "/api/usage" && req.method === "GET")
         return handleUsage(env, req, claims);
+      if (path === "/api/audio" && req.method === "GET")
+        return handleGetAudio(env, req, requireAuth());
       if (path === "/api/notes" && req.method === "GET")
         return handleGetNotes(env, req, requireAuth());
       if (path === "/api/notes/sync" && req.method === "POST")

@@ -188,7 +188,10 @@ export default function RecordingSlate({
             subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
             tags: (data.tags ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags) : ["audio"]).concat("voice"),
             modelUsed: result.model || (tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite"),
-            audioData: base64Data,
+            // Audio now lives in R2 (returned as audioKey); fall back to inline
+            // base64 only if the backend's object storage was unavailable.
+            audioKey: result.audioKey || undefined,
+            audioData: result.audioKey ? undefined : base64Data,
           };
 
           onRecordingComplete(newNote);

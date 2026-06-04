@@ -30,6 +30,7 @@ export interface RecordingNote {
   tags: string[];
   audioData?: string; // legacy base64 audio (older locally-stored notes)
   audioKey?: string; // R2 object key for cloud-stored audio; played back via /api/audio
+  audioBytes?: number; // size of the stored audio in bytes (for storage accounting)
   modelUsed: string;
   userId?: string;
 }

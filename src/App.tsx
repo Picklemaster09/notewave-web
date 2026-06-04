@@ -411,6 +411,9 @@ export default function App() {
   };
 
   const getNoteAudioSizeBytes = (note: RecordingNote): number => {
+    // Audio lives in R2 now; its size is recorded on the note. Fall back to the
+    // legacy inline base64 for older locally-stored notes.
+    if (typeof note.audioBytes === "number") return note.audioBytes;
     if (!note.audioData) return 0;
     const base64Data = note.audioData.includes(",") ? note.audioData.split(",")[1] : note.audioData;
     return Math.round(base64Data.length * 0.75);
@@ -432,20 +435,23 @@ export default function App() {
       return;
     }
 
-    // Storage capacity check — Pro only (1 GB). Free users are bounded by the
-    // note count cap above, so a separate MB cap is redundant for them.
-    if (isPremium) {
-      const voiceNotes = notes.filter(n => Array.isArray(n.tags) && !n.tags.includes("uploaded"));
+    // Combined storage capacity check (voice memos + uploads + notes): Free 5 MB,
+    // Pro 1 GB. Audio bytes live in R2 but are accounted for via note.audioBytes.
+    {
       const totalTextBytes = notes.reduce((acc, note) => acc + getNoteTextSizeBytes(note), 0);
-      const totalAudioBytes = voiceNotes.reduce((acc, note) => acc + getNoteAudioSizeBytes(note), 0);
+      const totalAudioBytes = notes.reduce((acc, note) => acc + getNoteAudioSizeBytes(note), 0);
       const totalUsedKB = (totalTextBytes + totalAudioBytes) / 1024;
       const incomingKB = (getNoteTextSizeBytes(newNote) + getNoteAudioSizeBytes(newNote)) / 1024;
-      const maxKB = 1048576;
+      const maxKB = isPremium ? 1048576 : 51200; // 1 GB / 50 MB
+      const displayMaxStr = isPremium ? "1 GB" : "50 MB";
 
       if (totalUsedKB + incomingKB > maxKB) {
         setLimitErrorMsg(settings.language === "es"
-          ? "¡Base de datos cloud llena (límite de 1 GB superado)!"
-          : "Cloud Database capacity limit full (1 GB storage limit exceeded)!");
+          ? `¡Almacenamiento lleno (límite de ${displayMaxStr} superado)! ${isPremium ? "" : "Actualiza a Pro para 1 GB de almacenamiento seguro."}`
+          : `Storage capacity full (${displayMaxStr} limit exceeded)! ${isPremium ? "" : "Upgrade to Pro for 1 GB of secure cloud storage."}`);
+        if (!isPremium) {
+          setShowUpgradeCheckout(true);
+        }
         return;
       }
     }

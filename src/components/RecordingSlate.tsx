@@ -161,6 +161,12 @@ export default function RecordingSlate({
           if (!response.ok) {
             if (result.error === "RATE_LIMIT_EXCEEDED") {
               setErrorText(result.message);
+            } else if (result.error === "STORAGE_LIMIT_EXCEEDED") {
+              setErrorText(
+                tier === "premium"
+                  ? result.message || "Audio storage is full. Delete some voice memos to free up space."
+                  : "Audio storage full on the free plan. Delete some memos or upgrade to Pro for more space."
+              );
             } else if (result.error === "INVALID_CREDENTIALS") {
               setErrorText("Invalid API key configured. Please double check your personal credentials in Settings.");
             } else {
@@ -192,6 +198,7 @@ export default function RecordingSlate({
             // base64 only if the backend's object storage was unavailable.
             audioKey: result.audioKey || undefined,
             audioData: result.audioKey ? undefined : base64Data,
+            audioBytes: result.audioBytes || audioBlob.size,
           };
 
           onRecordingComplete(newNote);

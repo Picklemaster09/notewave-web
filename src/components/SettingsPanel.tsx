@@ -194,6 +194,9 @@ export default function SettingsPanel({
   };
 
   const getNoteAudioSizeBytes = (note: RecordingNote): number => {
+    // Audio now lives in R2; its byte size is stored on the note. Older notes
+    // still carry inline base64, so decode that as a fallback.
+    if (typeof note.audioBytes === "number") return note.audioBytes;
     if (!note.audioData) return 0;
     // Decode base64 character size to actual binary byte amount (~3 bytes for every 4 base64 characters)
     const base64Data = note.audioData.includes(",") ? note.audioData.split(",")[1] : note.audioData;
@@ -801,35 +804,44 @@ export default function SettingsPanel({
                   );
                 })()}
 
-                {/* 2. Cloud Database byte capacity — Pro only (1 GB). Free has no MB cap. */}
-                {settings.tier === "premium" && (
-                  <div className="flex flex-col gap-1.5 border-t border-[#F2F2F7] pt-2.5">
-                    <div className="flex justify-between font-semibold">
-                      <span>{langDict.language === "es" ? "Base de Datos Cloud" : "Cloud Database"}</span>
-                      <span className="font-mono text-[11px] font-black text-gray-700">
-                        {(() => {
-                          const usedKB = (totalTextBytes + totalAudioBytes) / 1024;
-                          const usedStr = usedKB >= 1024 ? `${(usedKB / 1024).toFixed(2)} MB` : `${usedKB.toFixed(2)} KB`;
-                          return `${usedStr} / 1 GB`;
-                        })()}
-                      </span>
+                {/* 2. Combined storage capacity (voice memos + uploads + notes):
+                    Free 5 MB, Pro 1 GB. Audio bytes are counted via note.audioBytes. */}
+                {(() => {
+                  const capKB = settings.tier === "premium" ? 1048576 : 51200; // 1 GB / 50 MB
+                  const capStr = settings.tier === "premium" ? "1 GB" : "50 MB";
+                  const usedKB = (totalTextBytes + totalAudioBytes) / 1024;
+                  const ratio = usedKB / capKB;
+                  const fmt = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(2)} KB`);
+                  return (
+                    <div className="flex flex-col gap-1.5 border-t border-[#F2F2F7] pt-2.5">
+                      <div className="flex justify-between font-semibold">
+                        <span>{langDict.language === "es" ? "Almacenamiento" : "Storage"}</span>
+                        <span className="font-mono text-[11px] font-black text-gray-700">
+                          {fmt(usedKB)} / {capStr}
+                        </span>
+                      </div>
+                      <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all duration-300 ${
+                            ratio > 0.9 ? "bg-red-600" : ratio > 0.7 ? "bg-amber-500" : "bg-blue-600"
+                          }`}
+                          style={{ width: `${Math.min(100, Math.max(0, ratio * 100))}%` }}
+                        />
+                      </div>
+                      {/* Voice-memo share of that storage */}
+                      <div className="flex justify-between text-[10px] text-gray-400 font-bold font-mono">
+                        <span>🎙️ {langDict.language === "es" ? "Memos de voz" : "Voice memos"}</span>
+                        <span>{fmt(voiceAudioKB)}</span>
+                      </div>
                     </div>
-                    <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full transition-all duration-300 ${
-                          ((totalTextBytes + totalAudioBytes) / 1024 / 1048576) > 0.9 ? "bg-red-600" : ((totalTextBytes + totalAudioBytes) / 1024 / 1048576) > 0.7 ? "bg-amber-500" : "bg-blue-600"
-                        }`}
-                        style={{ width: `${Math.min(100, Math.max(0, (((totalTextBytes + totalAudioBytes) / 1024) / 1048576) * 100))}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
 
               {settings.tier !== "premium" ? (
                 <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 flex flex-col gap-2 mt-1">
                   <p className="text-[10px] text-amber-800 font-semibold leading-relaxed">
-                    ⚠️ <strong>{langDict.language === "es" ? "Límites del Plan Libre Activos." : "Free Plan Account Limits:"}</strong> {langDict.language === "es" ? "El plan gratuito permite hasta 10 notas y archivos combinados. Actualiza a Pro para 100 notas y 1 GB de almacenamiento seguro en la nube." : "The free plan allows up to 10 combined notes & uploads. Upgrade to Pro for 100 notes and 1 GB of secure cloud storage."}
+                    ⚠️ <strong>{langDict.language === "es" ? "Límites del Plan Libre Activos." : "Free Plan Account Limits:"}</strong> {langDict.language === "es" ? "El plan gratuito permite hasta 10 notas y archivos combinados y 50 MB de almacenamiento. Actualiza a Pro para 100 notas y 1 GB de almacenamiento seguro en la nube." : "The free plan allows up to 10 combined notes & uploads and 50 MB of storage. Upgrade to Pro for 100 notes and 1 GB of secure cloud storage."}
                   </p>
                   <button
                     type="button"

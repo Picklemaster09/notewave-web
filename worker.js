@@ -130,6 +130,26 @@ function noteLimit(plan) {
   return plan === "premium" ? PREMIUM_NOTES : FREE_NOTES;
 }
 
+// Per-user audio storage cap in R2. Backstop against R2 abuse; the frontend
+// enforces the real combined storage quota (voice + uploads + notes together).
+const FREE_AUDIO_BYTES = 50 * 1024 * 1024; // 50 MB
+const PREMIUM_AUDIO_BYTES = 1024 * 1024 * 1024; // 1 GB
+function audioLimit(plan) {
+  return plan === "premium" ? PREMIUM_AUDIO_BYTES : FREE_AUDIO_BYTES;
+}
+// Total bytes a user already holds in R2, summed across the (paginated) object
+// listing under their prefix.
+async function r2UsedBytes(env, prefix) {
+  let total = 0;
+  let cursor;
+  do {
+    const res = await env.AUDIO.list({ prefix, cursor, limit: 1000 });
+    for (const o of res.objects) total += o.size || 0;
+    cursor = res.truncated ? res.cursor : undefined;
+  } while (cursor);
+  return total;
+}
+
 // Per-calendar-day (UTC) counter key, so usage resets at 00:00 UTC instead of
 // rolling 24h from the last request.
 function rateKey(sub) {
@@ -304,6 +324,7 @@ function noteToDb(n, userId) {
     model_used: n.modelUsed || "gemini",
     duration: Math.round(Number(n.duration || 0)),
     audio_key: n.audioKey || null,
+    audio_bytes: Math.round(Number(n.audioBytes || 0)),
     created_at: n.createdAt || new Date().toISOString(),
   };
 }
@@ -325,6 +346,7 @@ function noteToClient(r) {
     modelUsed: r.model_used,
     duration: r.duration || 0,
     audioKey: r.audio_key || null,
+    audioBytes: r.audio_bytes || 0,
     createdAt: r.created_at,
   };
 }
@@ -346,6 +368,25 @@ async function handleTranscribe(env, req, claims) {
     ? b.audio.split(";base64,")[1]
     : b.audio;
   const mime = b.audio.match(/data:([^;]+);/)?.[1] || "audio/webm";
+  // Enforce the per-user audio storage cap up front so we don't spend an AI
+  // call on a recording we'd then refuse to store. base64 inflates ~4/3, so the
+  // decoded size is ~75% of the string length.
+  if (env.AUDIO) {
+    const incoming = Math.floor(base64.length * 0.75);
+    const cap = audioLimit(plan);
+    const used = await r2UsedBytes(env, `${claims.sub}/`);
+    if (used + incoming > cap)
+      return json(
+        env,
+        req,
+        {
+          error: "STORAGE_LIMIT_EXCEEDED",
+          message: `Audio storage full (${Math.round(cap / 1024 / 1024)} MB limit on the ${plan} plan).`,
+          limit: cap,
+        },
+        413
+      );
+  }
   try {
     const out = await geminiGenerate(
       env,
@@ -360,15 +401,19 @@ async function handleTranscribe(env, req, claims) {
     // is checkable on playback without a DB lookup. Best-effort: a storage
     // failure must never block returning the transcription.
     let audioKey = null;
+    let audioBytes = 0;
     if (env.AUDIO) {
       try {
+        const bytes = b64urlToBytes(base64);
         const ext = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "m4a" : "webm";
         audioKey = `${claims.sub}/${crypto.randomUUID()}.${ext}`;
-        await env.AUDIO.put(audioKey, b64urlToBytes(base64), {
+        await env.AUDIO.put(audioKey, bytes, {
           httpMetadata: { contentType: mime },
         });
+        audioBytes = bytes.length;
       } catch {
         audioKey = null;
+        audioBytes = 0;
       }
     }
     return json(env, req, {
@@ -376,6 +421,7 @@ async function handleTranscribe(env, req, claims) {
       data: normalizeSubTodos(safeParse(out, "")),
       model: geminiModel(env),
       audioKey,
+      audioBytes,
     });
   } catch (e) {
     return json(env, req, { error: "AI_ERROR", message: e.message }, 502);

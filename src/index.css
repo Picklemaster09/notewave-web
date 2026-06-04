@@ -70,23 +70,23 @@
     --accent-color-light: #1e3a8a;
   }
   &[data-accent="orange"] {
-    --accent-color: #fb923c;
-    --accent-color-hover: #f97316;
+    --accent-color: #f97316;
+    --accent-color-hover: #ea580c;
     --accent-color-light: #7c2d12;
   }
   &[data-accent="purple"] {
-    --accent-color: #a78bfa;
-    --accent-color-hover: #8b5cf6;
+    --accent-color: #8b5cf6;
+    --accent-color-hover: #7c3aed;
     --accent-color-light: #4c1d95;
   }
   &[data-accent="green"] {
-    --accent-color: #34d399;
-    --accent-color-hover: #10b981;
+    --accent-color: #10b981;
+    --accent-color-hover: #059669;
     --accent-color-light: #064e3b;
   }
   &[data-accent="red"] {
-    --accent-color: #f87171;
-    --accent-color-hover: #ef4444;
+    --accent-color: #ef4444;
+    --accent-color-hover: #dc2626;
     --accent-color-light: #7f1d1d;
   }
 }

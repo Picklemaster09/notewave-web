@@ -213,7 +213,8 @@ export default function SettingsPanel({
   const totalTextBytes = notes.reduce((acc, note) => acc + getNoteTextSizeBytes(note), 0);
   const notesTextKB = totalTextBytes / 1024;
 
-  // Voice Memos card: displays pure high-fidelity recorded sound waveform binary size
+  // Voice Memos card: count of notes that actually carry audio, plus their size.
+  const voiceMemoCount = notes.filter((n) => n.audioKey || n.audioData).length;
   const totalAudioBytes = voiceNotes.reduce((acc, note) => acc + getNoteAudioSizeBytes(note), 0);
   const voiceAudioKB = totalAudioBytes / 1024;
 
@@ -752,12 +753,19 @@ export default function SettingsPanel({
           <div id="settings-psection-data" className="flex flex-col gap-5">
             
             {/* Grid structure as in screenshots */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div className="p-3 bg-slate-50/55 border border-[#E5E5EA] rounded-xl text-center select-none font-sans mt-1">
                 <span className="text-xl">📄</span>
                 <span className="text-sm font-black text-[#1C1C1E] block mt-1">{notes.length}</span>
                 <span className="text-[10px] text-gray-500 font-bold block">{langDict.language === "es" ? "Notas" : "Notes"}</span>
-                <span className="text-[9px] text-gray-400 block font-mono">{(notesTextKB + voiceAudioKB).toFixed(2)} KB</span>
+                <span className="text-[9px] text-gray-400 block font-mono">{notesTextKB.toFixed(2)} KB</span>
+              </div>
+
+              <div className="p-3 bg-slate-50/55 border border-[#E5E5EA] rounded-xl text-center select-none font-sans mt-1">
+                <span className="text-xl">🎙️</span>
+                <span className="text-sm font-black text-[#1C1C1E] block mt-1">{voiceMemoCount}</span>
+                <span className="text-[10px] text-gray-500 font-bold block">{langDict.language === "es" ? "Memos de voz" : "Voice memos"}</span>
+                <span className="text-[9px] text-gray-400 block font-mono">{voiceAudioKB.toFixed(2)} KB</span>
               </div>
 
               <div className="p-3 bg-slate-50/55 border border-[#E5E5EA] rounded-xl text-center select-none font-sans mt-1">
@@ -827,11 +835,6 @@ export default function SettingsPanel({
                           }`}
                           style={{ width: `${Math.min(100, Math.max(0, ratio * 100))}%` }}
                         />
-                      </div>
-                      {/* Voice-memo share of that storage */}
-                      <div className="flex justify-between text-[10px] text-gray-400 font-bold font-mono">
-                        <span>🎙️ {langDict.language === "es" ? "Memos de voz" : "Voice memos"}</span>
-                        <span>{fmt(voiceAudioKB)}</span>
                       </div>
                     </div>
                   );

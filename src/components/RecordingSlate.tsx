@@ -210,6 +210,7 @@ export default function RecordingSlate({
       const result = await response.json();
 
       if (!response.ok) {
+        const modelDown = result.error === "MODEL_UNAVAILABLE";
         if (result.error === "RATE_LIMIT_EXCEEDED") {
           setErrorText(result.message);
         } else if (result.error === "STORAGE_LIMIT_EXCEEDED") {
@@ -218,12 +219,19 @@ export default function RecordingSlate({
               ? result.message || "Audio storage is full. Delete some voice memos to free up space."
               : "Audio storage full on the free plan. Delete some memos or upgrade to Pro for more space."
           );
+        } else if (modelDown) {
+          // Both AI providers are unreachable — this doesn't count against the
+          // user's daily quota, so reassure them and ask them to retry.
+          setErrorText(result.message || "AI models aren't reachable right now. Please wait a few seconds and try again.");
         } else if (result.error === "INVALID_CREDENTIALS") {
           setErrorText("Invalid API key configured. Please double check your personal credentials in Settings.");
         } else {
           setErrorText(result.message || "Unable to transcribe notes. Please try again.");
         }
-        onUpdateNote(noteId, { status: "failed", title: "Transcription failed" });
+        onUpdateNote(noteId, {
+          status: "failed",
+          title: modelDown ? "Model not reachable — try again" : "Transcription failed",
+        });
         return;
       }
 

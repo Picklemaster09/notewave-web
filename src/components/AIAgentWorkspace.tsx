@@ -144,6 +144,18 @@ export default function AIAgentWorkspace({
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.error === "MODEL_UNAVAILABLE") {
+          // Both AI providers are down — the backend refunds this attempt, so it
+          // doesn't count against the daily quota. Ask the user to retry shortly.
+          setErrorMessage(
+            data.message ||
+              (isEs
+                ? "Los modelos de IA no están disponibles ahora. Espera unos segundos e inténtalo de nuevo."
+                : "AI models aren't reachable right now. Please wait a few seconds and try again.")
+          );
+          fetchUsageDetails(); // reflect the refunded balance
+          return;
+        }
         throw new Error(data.message || data.error || "Failed execution");
       }
 

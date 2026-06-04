@@ -179,6 +179,17 @@ async function checkRateLimit(env, key, limit) {
   });
   return { allowed: true, remaining: limit - (count + 1) };
 }
+// Give back a unit when a request never reached a working model (all providers
+// unavailable), so an outage doesn't eat the user's daily allowance.
+async function refundRateLimit(env, key) {
+  if (!env.RATE_LIMIT) return;
+  const raw = await env.RATE_LIMIT.get(key);
+  const count = raw ? parseInt(raw, 10) || 0 : 0;
+  if (count <= 0) return;
+  await env.RATE_LIMIT.put(key, String(count - 1), {
+    expirationTtl: secondsUntilUtcReset(),
+  });
+}
 
 async function getPlan(env, sub) {
   try {
@@ -239,6 +250,13 @@ async function geminiGenerate(env, parts, jsonMode, { retries = 2, baseDelayMs =
 
 // ---------- OpenAI fallback (used only when Gemini is overloaded) ----------
 const canFallback = (env, e) => !!(e && e.overloaded && env.OPENAI_API_KEY);
+// Build an OpenAI error, tagging 5xx as overloaded so a both-providers-down
+// situation surfaces to the client as "models unavailable".
+function openaiError(status, text) {
+  const err = new Error(`OpenAI ${status}: ${String(text).slice(0, 300)}`);
+  if (status >= 500) err.overloaded = true;
+  return err;
+}
 // Single-prompt text generation via gpt-4o-mini. jsonMode uses response_format;
 // the structured prompt already contains the word "JSON" as OpenAI requires.
 async function openaiText(env, prompt, jsonMode) {
@@ -255,10 +273,7 @@ async function openaiText(env, prompt, jsonMode) {
     },
     body: JSON.stringify(body),
   });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`OpenAI ${res.status}: ${t.slice(0, 300)}`);
-  }
+  if (!res.ok) throw openaiError(res.status, await res.text());
   const data = await res.json();
   return data?.choices?.[0]?.message?.content || "";
 }
@@ -275,10 +290,7 @@ async function openaiTranscribe(env, base64, mime) {
     headers: { Authorization: `Bearer ${env.OPENAI_API_KEY}` },
     body: form,
   });
-  if (!res.ok) {
-    const t = await res.text();
-    throw new Error(`OpenAI transcribe ${res.status}: ${t.slice(0, 300)}`);
-  }
+  if (!res.ok) throw openaiError(res.status, await res.text());
   const data = await res.json();
   return data?.text || "";
 }
@@ -502,6 +514,21 @@ async function handleTranscribe(env, req, claims) {
       audioBytes,
     });
   } catch (e) {
+    // All providers unavailable (Gemini overloaded + OpenAI missing or also
+    // down): refund the request so an outage doesn't cost the user a unit of
+    // their daily allowance, and tell them to retry shortly.
+    if (e && e.overloaded) {
+      await refundRateLimit(env, rateKey(claims.sub));
+      return json(
+        env,
+        req,
+        {
+          error: "MODEL_UNAVAILABLE",
+          message: "AI models are busy right now. Please wait a few seconds and try again.",
+        },
+        503
+      );
+    }
     return json(env, req, { error: "AI_ERROR", message: e.message }, 502);
   }
 }
@@ -538,6 +565,21 @@ async function handleAnalyzeText(env, req, claims) {
       model: usedModel,
     });
   } catch (e) {
+    // All providers unavailable (Gemini overloaded + OpenAI missing or also
+    // down): refund the request so an outage doesn't cost the user a unit of
+    // their daily allowance, and tell them to retry shortly.
+    if (e && e.overloaded) {
+      await refundRateLimit(env, rateKey(claims.sub));
+      return json(
+        env,
+        req,
+        {
+          error: "MODEL_UNAVAILABLE",
+          message: "AI models are busy right now. Please wait a few seconds and try again.",
+        },
+        503
+      );
+    }
     return json(env, req, { error: "AI_ERROR", message: e.message }, 502);
   }
 }
@@ -578,6 +620,21 @@ async function handleAiAgent(env, req, claims) {
     }
     return json(env, req, { success: true, reply });
   } catch (e) {
+    // All providers unavailable (Gemini overloaded + OpenAI missing or also
+    // down): refund the request so an outage doesn't cost the user a unit of
+    // their daily allowance, and tell them to retry shortly.
+    if (e && e.overloaded) {
+      await refundRateLimit(env, rateKey(claims.sub));
+      return json(
+        env,
+        req,
+        {
+          error: "MODEL_UNAVAILABLE",
+          message: "AI models are busy right now. Please wait a few seconds and try again.",
+        },
+        503
+      );
+    }
     return json(env, req, { error: "AI_ERROR", message: e.message }, 502);
   }
 }

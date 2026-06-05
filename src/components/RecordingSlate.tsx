@@ -168,7 +168,9 @@ export default function RecordingSlate({
 
     // 1) Optimistic add — appears in history right away as "processing".
     const noteId = "note_" + Date.now();
-    const fallbackModel = tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+    // Label stored on the note if the backend doesn't report a model. The actual
+    // model is always whatever the Worker calls; never the cosmetic "lite" name.
+    const fallbackModel = "gemini-3.5-flash";
     const pendingNote: RecordingNote = {
       id: noteId,
       title: "",

@@ -46,7 +46,9 @@ export default function TextUploadSlate({
     // 1) Optimistic add — the raw text is already useful, so show it instantly
     // while the AI generates the title, summary and action items.
     const noteId = "note_" + Date.now();
-    const fallbackModel = tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+    // Label stored on the note if the backend doesn't report a model. The actual
+    // model is always whatever the Worker calls; never the cosmetic "lite" name.
+    const fallbackModel = "gemini-3.5-flash";
     const pendingNote: RecordingNote = {
       id: noteId,
       title: `Indexed: ${sourceName}`,

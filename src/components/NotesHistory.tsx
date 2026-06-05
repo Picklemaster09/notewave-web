@@ -647,7 +647,9 @@ export default function NotesHistory({
     const noteId = `manual_note_${Date.now()}`;
     const title = newNoteTitle.trim();
     const body = newNoteBody.trim();
-    const fallbackModel = tier === "premium" ? "gemini-3.5-flash" : "gemini-3.1-flash-lite";
+    // Label stored on the note if the backend doesn't report a model. The actual
+    // model is always whatever the Worker calls; never the cosmetic "lite" name.
+    const fallbackModel = "gemini-3.5-flash";
 
     // 1) Optimistic add — the user's title and body show instantly while the AI
     // generates the summary, action items and sub-todos in the background.

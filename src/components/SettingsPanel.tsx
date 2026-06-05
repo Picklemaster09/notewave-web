@@ -705,9 +705,9 @@ export default function SettingsPanel({
                         {settings.tier === "premium" ? "👑 NoteWave Pro Plan" : "🟢 Free Account Tier"}
                       </span>
                       <span className="text-[10.5px] text-gray-500 font-bold block mt-1">
-                        {settings.tier === "premium" 
-                          ? "Pro Model: Gemini 3.5 Flash" 
-                          : "Lite Model: Gemini 3.1 Flash Lite"}
+                        {settings.tier === "premium"
+                          ? "Pro Model: Gemini 3.5 Flash"
+                          : "Free Model: Gemini 3.5 Flash"}
                       </span>
                     </div>
                     <div className="text-right">

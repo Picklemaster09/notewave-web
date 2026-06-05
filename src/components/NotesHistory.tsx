@@ -476,15 +476,18 @@ function NoteCardInternal({
               </div>
             )}
 
-            {/* Speech transcript */}
-            <div className="flex flex-col gap-1.5">
-              <div className="text-[10px] font-mono text-gray-400 font-bold uppercase flex items-center gap-1">
-                <FileText className="w-3.5 h-3.5 text-gray-400" /> {(note.audioKey || note.audioData) ? "Speech transcript:" : "Written content notes:"}
+            {/* Speech transcript — only for notes/ideas that have one. Tasks
+                (reminders) are pure text and store no transcript. */}
+            {note.transcript && (
+              <div className="flex flex-col gap-1.5">
+                <div className="text-[10px] font-mono text-gray-400 font-bold uppercase flex items-center gap-1">
+                  <FileText className="w-3.5 h-3.5 text-gray-400" /> {(note.audioKey || note.audioData) ? "Speech transcript:" : "Written content notes:"}
+                </div>
+                <div className="p-4 rounded-xl bg-slate-50 border border-[#E5E5EA] text-xs text-gray-650 leading-relaxed font-semibold">
+                  <MarkdownViewer content={note.transcript} />
+                </div>
               </div>
-              <div className="p-4 rounded-xl bg-slate-50 border border-[#E5E5EA] text-xs text-gray-650 leading-relaxed font-semibold">
-                <MarkdownViewer content={note.transcript} />
-              </div>
-            </div>
+            )}
 
             {/* Footer tags and delete options inside expanded body */}
             <div className="flex items-center justify-between gap-4 pt-3.5 border-t border-[#E5E5EA]">

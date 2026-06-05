@@ -449,15 +449,8 @@ export default function TasksWorkspace({
                         </div>
                       )}
 
-                      {/* Brief details transcript summary if there was voice dictation */}
-                      {note.transcript && note.transcript !== "Manually created checklist task entry." && (
-                        <div className="flex flex-col gap-1.5">
-                          <span className="text-[10px] font-mono uppercase font-bold text-gray-400">Full Transcription Content:</span>
-                          <div className="p-3.5 bg-slate-50 border border-[#E5E5EA] rounded-xl text-xs text-gray-650 leading-relaxed font-semibold">
-                            {note.transcript}
-                          </div>
-                        </div>
-                      )}
+                      {/* Tasks are pure text — the title + checklist are the content;
+                          the raw transcript is intentionally not shown or stored. */}
 
                       {/* Footer tags and delete options inside expanded body */}
                       <div className="flex items-center justify-between gap-4 pt-3.5 border-t border-[#E5E5EA]">

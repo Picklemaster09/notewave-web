@@ -486,13 +486,20 @@ async function handleTranscribe(env, req, claims) {
       );
       usedModel = "gpt-4o-mini";
     }
-    // Persist the source audio to R2 object storage (free egress) so it can be
-    // played back across devices. Keyed by the verified token sub so ownership
-    // is checkable on playback without a DB lookup. Best-effort: a storage
-    // failure must never block returning the transcription.
+    const data = normalizeSubTodos(safeParse(out, ""));
+    // Tasks (reminders) are pure text: we keep the title and checklist but drop
+    // the raw transcript and never store the source audio. Only ideas/notes get
+    // the full transcript + a saved voice recording.
+    const isReminder = data.category === "reminders";
+
     let audioKey = null;
     let audioBytes = 0;
-    if (env.AUDIO) {
+    if (isReminder) {
+      data.transcript = "";
+    } else if (env.AUDIO) {
+      // Persist the source audio to R2 (free egress) so it plays back across
+      // devices. Keyed by the verified token sub for ownership checks. Best
+      // effort: a storage failure must never block returning the transcription.
       try {
         const bytes = b64urlToBytes(base64);
         const ext = mime.includes("ogg") ? "ogg" : mime.includes("mp4") ? "m4a" : "webm";
@@ -508,7 +515,7 @@ async function handleTranscribe(env, req, claims) {
     }
     return json(env, req, {
       success: true,
-      data: normalizeSubTodos(safeParse(out, "")),
+      data,
       model: usedModel,
       audioKey,
       audioBytes,

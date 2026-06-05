@@ -236,9 +236,12 @@ export default function RecordingSlate({
       }
 
       const data = result.data;
+      // Tasks (reminders) are pure text — no raw transcript, no saved audio.
+      // Ideas/notes keep the full transcript and the voice recording.
+      const isReminder = data.category === "reminders";
       onUpdateNote(noteId, {
         title: data.headlineTitle || "Voice Recording note",
-        transcript: data.transcript || "No words transcribed.",
+        transcript: isReminder ? "" : (data.transcript || "No words transcribed."),
         ideaSummary: data.summaryText || "No conceptual tags.",
         actionItems: data.actionItems || "",
         category: data.category || "ideas",
@@ -249,11 +252,11 @@ export default function RecordingSlate({
         subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
         tags: (data.tags ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags) : ["audio"]).concat("voice"),
         modelUsed: result.model || fallbackModel,
-        // Audio now lives in R2 (returned as audioKey); fall back to inline
-        // base64 only if the backend's object storage was unavailable.
-        audioKey: result.audioKey || undefined,
-        audioData: result.audioKey ? undefined : base64Data,
-        audioBytes: result.audioBytes || audioBlob.size,
+        // Audio (R2 key or inline base64) is kept only for ideas/notes; tasks
+        // discard it so nothing about the recording is stored.
+        audioKey: isReminder ? undefined : (result.audioKey || undefined),
+        audioData: isReminder ? undefined : (result.audioKey ? undefined : base64Data),
+        audioBytes: isReminder ? 0 : (result.audioBytes || audioBlob.size),
         status: "ready",
       });
     } catch (e) {

@@ -169,24 +169,21 @@ function hoursUntilUtcReset() {
   return Math.ceil(secondsUntilUtcReset() / 3600);
 }
 
+// Check the current count without incrementing — the actual increment happens
+// only after a successful AI response so failed requests never eat the allowance.
 async function checkRateLimit(env, key, limit) {
   if (!env.RATE_LIMIT) return { allowed: true, remaining: limit };
   const raw = await env.RATE_LIMIT.get(key);
   const count = raw ? parseInt(raw, 10) || 0 : 0;
   if (count >= limit) return { allowed: false, remaining: 0 };
-  await env.RATE_LIMIT.put(key, String(count + 1), {
-    expirationTtl: secondsUntilUtcReset(),
-  });
-  return { allowed: true, remaining: limit - (count + 1) };
+  return { allowed: true, remaining: limit - count };
 }
-// Give back a unit when a request never reached a working model (all providers
-// unavailable), so an outage doesn't eat the user's daily allowance.
-async function refundRateLimit(env, key) {
+// Increment the counter only after a successful AI response.
+async function incrementRateLimit(env, key) {
   if (!env.RATE_LIMIT) return;
   const raw = await env.RATE_LIMIT.get(key);
   const count = raw ? parseInt(raw, 10) || 0 : 0;
-  if (count <= 0) return;
-  await env.RATE_LIMIT.put(key, String(count - 1), {
+  await env.RATE_LIMIT.put(key, String(count + 1), {
     expirationTtl: secondsUntilUtcReset(),
   });
 }
@@ -244,7 +241,7 @@ async function geminiGenerate(env, parts, jsonMode, { retries = 2, baseDelayMs =
   }
   // Tag transient/overload failures so callers can fall back to OpenAI.
   const err = new Error(`Gemini ${lastStatus}: ${lastText.slice(0, 300)}`);
-  if (GEMINI_RETRYABLE.has(lastStatus)) err.overloaded = true;
+  if (GEMINI_RETRYABLE.has(lastStatus) || lastStatus === 429) err.overloaded = true;
   throw err;
 }
 
@@ -254,7 +251,7 @@ const canFallback = (env, e) => !!(e && e.overloaded && env.OPENAI_API_KEY);
 // situation surfaces to the client as "models unavailable".
 function openaiError(status, text) {
   const err = new Error(`OpenAI ${status}: ${String(text).slice(0, 300)}`);
-  if (status >= 500) err.overloaded = true;
+  if (status >= 500 || status === 429) err.overloaded = true;
   return err;
 }
 // Single-prompt text generation via gpt-4o-mini. jsonMode uses response_format;
@@ -295,7 +292,10 @@ async function openaiTranscribe(env, base64, mime) {
   return data?.text || "";
 }
 
-function structuredPrompt(sourceClause) {
+function structuredPrompt(sourceClause, generateTodos = true) {
+  const todoTail = generateTodos
+    ? `If the input is purely factual with zero actionable steps, set "subTodos" to []. If "isComplex" is true, produce 5-8 structured sub-todos outlining how to build it.`
+    : `The user has DISABLED automatic to-do generation. ALWAYS set "actionItems" to "", "subTodos" to [], and "isComplex" to false, regardless of the content. Still fill every other field normally.`;
   return `${sourceClause}
 All text values you generate MUST be in the same primary language detected in the input.
 Return EXACTLY one valid JSON object (no markdown fences, no extra text) with these keys:
@@ -312,7 +312,7 @@ Return EXACTLY one valid JSON object (no markdown fences, no extra text) with th
   "subTodos": [ { "id": "sub_1", "text": "Detailed micro-task", "completed": false } ],
   "tags": "(2-3 comma-separated relevant tags)"
 }
-If the input is purely factual with zero actionable steps, set "subTodos" to []. If "isComplex" is true, produce 5-8 structured sub-todos outlining how to build it.`;
+${todoTail}`;
 }
 function safeParse(text, fallbackTranscript) {
   try {
@@ -471,7 +471,12 @@ async function handleTranscribe(env, req, claims) {
         env,
         [
           { inlineData: { data: base64, mimeType: mime } },
-          { text: structuredPrompt("Analyze this audio note and transcribe it.") },
+          {
+          text: structuredPrompt(
+            "Analyze this audio note and transcribe it.",
+            b.generateTodos !== false
+          ),
+        },
         ],
         true
       );
@@ -486,6 +491,8 @@ async function handleTranscribe(env, req, claims) {
       );
       usedModel = "gpt-4o-mini";
     }
+    // AI response received successfully — now count the request.
+    await incrementRateLimit(env, rateKey(claims.sub));
     const data = normalizeSubTodos(safeParse(out, ""));
     // Tasks (reminders) are pure text: we keep the title and checklist but drop
     // the raw transcript and never store the source audio. Only ideas/notes get
@@ -521,11 +528,9 @@ async function handleTranscribe(env, req, claims) {
       audioBytes,
     });
   } catch (e) {
-    // All providers unavailable (Gemini overloaded + OpenAI missing or also
-    // down): refund the request so an outage doesn't cost the user a unit of
-    // their daily allowance, and tell them to retry shortly.
+    // Request never produced a successful AI response — it was not counted,
+    // so the user can simply retry without losing a unit of their allowance.
     if (e && e.overloaded) {
-      await refundRateLimit(env, rateKey(claims.sub));
       return json(
         env,
         req,
@@ -552,7 +557,8 @@ async function handleAnalyzeText(env, req, claims) {
       429
     );
   const analyzePrompt = `${structuredPrompt(
-    "Analyze the following note text:"
+    "Analyze the following note text:",
+            b.generateTodos !== false
   )}\n\nINPUT TEXT:\n"""\n${b.text}\n"""`;
   try {
     let out;
@@ -564,6 +570,8 @@ async function handleAnalyzeText(env, req, claims) {
       out = await openaiText(env, analyzePrompt, true);
       usedModel = "gpt-4o-mini";
     }
+    // AI response received successfully — now count the request.
+    await incrementRateLimit(env, rateKey(claims.sub));
     const parsed = normalizeSubTodos(safeParse(out, b.text));
     if (!parsed.transcript) parsed.transcript = b.text;
     return json(env, req, {
@@ -572,11 +580,9 @@ async function handleAnalyzeText(env, req, claims) {
       model: usedModel,
     });
   } catch (e) {
-    // All providers unavailable (Gemini overloaded + OpenAI missing or also
-    // down): refund the request so an outage doesn't cost the user a unit of
-    // their daily allowance, and tell them to retry shortly.
+    // Request never produced a successful AI response — it was not counted,
+    // so the user can simply retry without losing a unit of their allowance.
     if (e && e.overloaded) {
-      await refundRateLimit(env, rateKey(claims.sub));
       return json(
         env,
         req,
@@ -625,13 +631,13 @@ async function handleAiAgent(env, req, claims) {
       if (!canFallback(env, e)) throw e;
       reply = await openaiText(env, prompt, false);
     }
+    // AI response received successfully — now count the request.
+    await incrementRateLimit(env, rateKey(claims.sub));
     return json(env, req, { success: true, reply });
   } catch (e) {
-    // All providers unavailable (Gemini overloaded + OpenAI missing or also
-    // down): refund the request so an outage doesn't cost the user a unit of
-    // their daily allowance, and tell them to retry shortly.
+    // Request never produced a successful AI response — it was not counted,
+    // so the user can simply retry without losing a unit of their allowance.
     if (e && e.overloaded) {
-      await refundRateLimit(env, rateKey(claims.sub));
       return json(
         env,
         req,

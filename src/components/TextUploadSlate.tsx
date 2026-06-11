@@ -84,6 +84,7 @@ export default function TextUploadSlate({
           customApiKey: customApiKey || undefined,
           filename: sourceName,
           language: language,
+          generateTodos: localStorage.getItem("settings_ai_suggestions") !== "false",
         }),
       });
 

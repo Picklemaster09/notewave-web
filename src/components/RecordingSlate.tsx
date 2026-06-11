@@ -194,6 +194,35 @@ export default function RecordingSlate({
     if (!accepted) return; // plan limit hit; parent surfaces the message
 
     // 2) Transcribe in the background and patch the note when it returns.
+        // AI Settings toggles (persisted to localStorage by SettingsPanel).
+        const autoTranscribe = localStorage.getItem("settings_auto_transcribe") !== "false";
+        const generateTodos = localStorage.getItem("settings_ai_suggestions") !== "false";
+
+        // Auto-transcribe disabled → just save the raw voice memo locally, no AI call.
+        if (!autoTranscribe) {
+          const voiceNote: RecordingNote = {
+            id: "note_" + Date.now(),
+            title: language === "es" ? "Memo de voz" : "Voice memo",
+            duration: duration,
+            createdAt: new Date().toISOString(),
+            transcript: "",
+            ideaSummary: "",
+            actionItems: "",
+            category: "ideas",
+            ideaName: "Note",
+            scheduledDate: "",
+            projectStartDate: "",
+            isComplex: false,
+            subTodos: [],
+            tags: ["voice", "untranscribed"],
+            modelUsed: "none",
+            audioData: base64Data,
+          };
+          onRecordingComplete(voiceNote);
+          setIsProcessing(false);
+          return;
+        }
+
     try {
       const response = await fetch(apiUrl("/api/transcribe"), {
         method: "POST",
@@ -206,6 +235,7 @@ export default function RecordingSlate({
           tier: tier,
           customApiKey: customApiKey || undefined,
           language: language,
+              generateTodos: generateTodos,
         }),
       });
 

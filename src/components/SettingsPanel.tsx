@@ -658,19 +658,21 @@ export default function SettingsPanel({
                 <TrendingUp className="w-4 h-4 text-blue-600" /> Active Plan Select
               </label>
 
-              <div className="grid grid-cols-2 p-1 bg-[#F2F2F7] rounded-xl border border-[#D1D1D6]">
-                <button
-                  id="tier-mode-free-btn"
-                  type="button"
-                  onClick={() => onSaveSettings({ ...settings, tier: "free" })}
-                  className={`py-2 rounded-lg text-[11px] font-sans font-extrabold transition-all cursor-pointer ${
-                    settings.tier === "free"
-                      ? "bg-white text-blue-600 border border-[#D1D1D6] shadow-xs"
-                      : "text-gray-500 hover:text-[#1C1C1E]"
-                  }`}
-                >
-                  🟢 Free Plan
-                </button>
+              <div className={`grid ${settings.tier === "premium" ? "grid-cols-1" : "grid-cols-2"} p-1 bg-[#F2F2F7] rounded-xl border border-[#D1D1D6]`}>
+                {settings.tier !== "premium" && (
+                  <button
+                    id="tier-mode-free-btn"
+                    type="button"
+                    onClick={() => onSaveSettings({ ...settings, tier: "free" })}
+                    className={`py-2 rounded-lg text-[11px] font-sans font-extrabold transition-all cursor-pointer ${
+                      settings.tier === "free"
+                        ? "bg-white text-blue-600 border border-[#D1D1D6] shadow-xs"
+                        : "text-gray-500 hover:text-[#1C1C1E]"
+                    }`}
+                  >
+                    🟢 Free Plan
+                  </button>
+                )}
                 <button
                   id="tier-mode-premium-btn"
                   type="button"

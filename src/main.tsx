@@ -27,6 +27,7 @@ const tree = auth0Domain && auth0ClientId ? (
     }}
     cacheLocation="localstorage"
     useRefreshTokens
+    useRefreshTokensFallback
   >
     <App />
   </Auth0Provider>

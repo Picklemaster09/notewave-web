@@ -209,8 +209,13 @@ export default function App() {
 
   // Bridge the Auth0 session into the app's existing user model so the rest of
   // the dashboard (notes/settings sync keyed by uid) keeps working unchanged.
+  // The token getter is registered here so that API calls can fetch a fresh
+  // access token. Auth0's SDK handles automatic token refresh using the stored
+  // refresh token, so users stay signed in even after the access token expires.
   useEffect(() => {
     if (isAuthenticated && auth0User) {
+      // Register the token getter – this is called by the API layer before each
+      // request to ensure a valid (non-expired) access token is used.
       registerTokenGetter(() => getAccessTokenSilently());
       handleUserChange({
         uid: auth0User.sub,
@@ -229,6 +234,50 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, auth0User]);
+  
+  // Periodically refresh the Auth0 access token so that when the user returns
+  // to the app after a long idle period (e.g., days), the token is already valid
+  // and API calls don't fail. Auth0's getAccessTokenSilently() will use the
+  // refresh token or perform a silent auth with the session cookie.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    
+    // Refresh token every 15 minutes to keep it fresh. Auth0 access tokens
+    // typically expire after 8 hours (28800 seconds), and refresh tokens
+    // expire after 3 days of inactivity by default.
+    const REFRESH_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
+    
+    const refreshTimer = setInterval(async () => {
+      try {
+        await getAccessTokenSilently();
+      } catch (e: any) {
+        // If login_required, the session has fully expired and user needs to
+        // re-authenticate. Log it but don't disrupt the UI.
+        if (e?.error === "login_required") {
+          console.warn(
+            "Auth0 session has expired. User will need to re-authenticate on next action."
+          );
+        } else {
+          console.warn("Periodic token refresh failed (non-fatal):", e);
+        }
+      }
+    }, REFRESH_INTERVAL_MS);
+    
+    // Also try an immediate refresh on mount (in case the app was left open
+    // but idle for a long time and the token expired)
+    const tryImmediateRefresh = async () => {
+      try {
+        await getAccessTokenSilently();
+      } catch (e: any) {
+        if (e?.error !== "login_required") {
+          console.warn("Immediate token refresh failed (non-fatal):", e);
+        }
+      }
+    };
+    tryImmediateRefresh();
+    
+    return () => clearInterval(refreshTimer);
+  }, [isAuthenticated, getAccessTokenSilently]);
   
   // Physical Bezel Mapped Triggers State
   const [triggerRecord, setTriggerRecord] = useState(false);

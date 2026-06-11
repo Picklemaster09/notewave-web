@@ -11,7 +11,6 @@ import {
   Trash2, 
   Bell, 
   Shield, 
-  RefreshCw,
   TrendingUp,
   Settings as SettingsIcon,
   Sparkles,
@@ -85,8 +84,6 @@ export default function SettingsPanel({
   const [isLoadingUsage, setIsLoadingUsage] = useState(false);
 
   // Action status triggers
-  const [isProcessingRAG, setIsProcessingRAG] = useState(false);
-  const [ragStatusMessage, setRagStatusMessage] = useState("");
   const [passwordStatus, setPasswordStatus] = useState("");
   const [saveConfirmation, setSaveConfirmation] = useState("");
 
@@ -167,14 +164,6 @@ export default function SettingsPanel({
     setTimeout(() => setSaveConfirmation(""), 3005);
   };
 
-  const handleProcessRAG = () => {
-    setIsProcessingRAG(true);
-    setRagStatusMessage("Re-indexing vectors based on your voice transcripts...");
-    setTimeout(() => {
-      setIsProcessingRAG(false);
-      setRagStatusMessage(`Successfully completed! RAG retrieval vector database is up-to-date with ${notes.length} voice notes.`);
-    }, 2000);
-  };
 
   // Separate pure text content size from binary-equivalent audio waveforms (since audio files are much larger than text!)
   const getNoteTextSizeBytes = (note: RecordingNote): number => {
@@ -868,48 +857,6 @@ export default function SettingsPanel({
               )}
             </div>
 
-            {/* AI Processing RAG Status info block */}
-            <div className="p-4 bg-slate-50 border border-[#E5E5EA] rounded-xl flex flex-col gap-3 font-sans">
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shrink-0" />
-                  <span className="text-xs font-black text-[#1C1C1E]">AI Processing</span>
-                </div>
-                <span className="text-[9px] font-mono font-bold uppercase text-gray-400">RAG Status</span>
-              </div>
-
-              <div className="flex flex-col gap-2.5 text-xs text-gray-700 font-semibold leading-relaxed">
-                <div className="flex items-center justify-between border-b border-[#F2F2F7] pb-1.5">
-                  <span>Processed documents:</span>
-                  <span className="text-green-700 font-mono font-bold leading-none">{notes.length} ready</span>
-                </div>
-                <div className="flex items-center justify-between pb-1">
-                  <span>Pending processing:</span>
-                  <span className="font-mono text-gray-400 font-bold leading-none">0 pending</span>
-                </div>
-                <p className="text-[10px] text-gray-500 leading-normal">
-                  Your data will be processed to enable AI-powered search and insights.
-                </p>
-              </div>
-
-              <button
-                id="data-rag-process-btn"
-                type="button"
-                onClick={handleProcessRAG}
-                disabled={isProcessingRAG || notes.length === 0}
-                className="w-full mt-1.5 py-2.5 rounded-xl border border-blue-700 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs shadow-xs transition-active active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isProcessingRAG ? "animate-spin" : ""}`} />
-                <span>Process All Data</span>
-              </button>
-
-              {ragStatusMessage && (
-                <div className="p-2 bg-blue-50 border border-blue-150 rounded-lg text-[10px] text-blue-800 font-extrabold leading-normal mt-1 flex items-start gap-1.5">
-                  <Info className="w-3.5 h-3.5 text-blue-600 shrink-0 mt-0.5" />
-                  <span>{ragStatusMessage}</span>
-                </div>
-              )}
-            </div>
 
             {/* Danger Zone */}
             <div className="p-4 bg-red-50/50 border border-red-100 rounded-2xl flex flex-col gap-2.5 font-sans mt-2">

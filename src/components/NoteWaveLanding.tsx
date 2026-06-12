@@ -156,6 +156,11 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
         const base64Data = reader.result as string;
 
         try {
+          console.log("[Demo Transcribe] Request starting:", {
+            url: apiUrl("/api/transcribe"),
+            audioSize: base64Data ? base64Data.length : 0,
+          });
+
           const response = await fetch(apiUrl("/api/transcribe"), {
             method: "POST",
             headers: {
@@ -168,9 +173,21 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
             }),
           });
 
+          console.log("[Demo Transcribe] Response received:", {
+            status: response.status,
+            statusText: response.statusText,
+            ok: response.ok,
+          });
+
           const result = await response.json();
 
           if (!response.ok) {
+            console.warn("[Demo Transcribe] Error response:", {
+              status: response.status,
+              error: result.error,
+              message: result.message,
+              fullResult: result,
+            });
             if (result.error === "RATE_LIMIT_EXCEEDED") {
               setDemoError("That's your free demo — sign in for unlimited voice notes!");
             } else {
@@ -199,6 +216,13 @@ export default function NoteWaveLanding({ onLanguageChange, currentLanguage = "e
           });
 
         } catch (e) {
+          console.error("[Demo Transcribe] Network/catch error:", {
+            error: e,
+            message: e instanceof Error ? e.message : "Unknown error",
+            name: e instanceof Error ? e.name : "Unknown",
+            isFailedFetch: e instanceof TypeError && e.message.includes("fetch"),
+            isNetworkError: e instanceof TypeError,
+          });
           console.warn("Demo API connection fallback to high-fidelity Offline Local Sandbox:", e);
           
           setDemoTasks([

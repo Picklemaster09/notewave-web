@@ -224,24 +224,50 @@ export default function RecordingSlate({
         }
 
     try {
-      const response = await fetch(apiUrl("/api/transcribe"), {
+      const authHeaders = await getAuthHeaders();
+      const requestUrl = apiUrl("/api/transcribe");
+      const requestBody = {
+        audio: base64Data,
+        tier: tier,
+        customApiKey: customApiKey || undefined,
+        language: language,
+        generateTodos: generateTodos,
+      };
+      
+      console.log("[Transcribe] Request starting:", {
+        url: requestUrl,
+        hasToken: !!authHeaders.Authorization,
+        tier,
+        language,
+        audioSize: base64Data ? base64Data.length : 0,
+        hasCustomKey: !!customApiKey,
+      });
+
+      const response = await fetch(requestUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(await getAuthHeaders()),
+          ...authHeaders,
         },
-        body: JSON.stringify({
-          audio: base64Data,
-          tier: tier,
-          customApiKey: customApiKey || undefined,
-          language: language,
-              generateTodos: generateTodos,
-        }),
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("[Transcribe] Response received:", {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok,
+        contentType: response.headers.get("content-type"),
       });
 
       const result = await response.json();
 
       if (!response.ok) {
+        console.warn("[Transcribe] Error response:", {
+          status: response.status,
+          error: result.error,
+          message: result.message,
+          fullResult: result,
+        });
         const modelDown = result.error === "MODEL_UNAVAILABLE";
         if (result.error === "RATE_LIMIT_EXCEEDED") {
           setErrorText(result.message);
@@ -292,8 +318,24 @@ export default function RecordingSlate({
         status: "ready",
       });
     } catch (e) {
-      console.error("Transcription API network error:", e);
-      setErrorText("Server Connection timeout. Ensure development server is configured.");
+      console.error("[Transcribe] Network/catch error:", {
+        error: e,
+        message: e instanceof Error ? e.message : "Unknown error",
+        name: e instanceof Error ? e.name : "Unknown",
+        type: typeof e,
+        isFailedFetch: e instanceof TypeError && e.message.includes("fetch"),
+        isNetworkError: e instanceof TypeError,
+      });
+      
+      // Provide more specific error messages based on error type
+      let errorMessage = "Server Connection timeout. Please try again.";
+      if (e instanceof TypeError && e.message.includes("fetch")) {
+        errorMessage = "Network error - CORS or connection blocked. Check that the backend server is running and allows requests from your domain.";
+      } else if (e instanceof TypeError) {
+        errorMessage = "Network error - failed to connect to the transcription server.";
+      }
+      
+      setErrorText(errorMessage);
       onUpdateNote(noteId, { status: "failed", title: "Transcription failed" });
     }
   };

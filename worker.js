@@ -783,7 +783,7 @@ async function handleUsage(env, req, claims) {
     const raw = await env.RATE_LIMIT.get(rateKey(claims.sub));
     remaining = Math.max(0, limit - (raw ? parseInt(raw, 10) || 0 : 0));
   }
-  return json(env, req, { limit, remaining, resetInHours: hoursUntilUtcReset() });
+  return json(env, req, { plan, limit, remaining, resetInHours: hoursUntilUtcReset() });
 }
 
 // ---------- Router (single entry point) ----------

@@ -89,7 +89,7 @@ export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecor
             </div>
             <p className="text-[11px] text-[#8E8E93] mt-0.5 leading-relaxed">
               {currentUser 
-                ? `Secured with end-to-end database replication. ${localCount} cached items backed up.`
+                ? `Secured with end-to-end database replication.`
                 : "NoteWave uses local browser database storage by default. Log in to sync to secure Supabase."}
             </p>
           </div>

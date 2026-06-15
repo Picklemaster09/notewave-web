@@ -80,7 +80,7 @@ export default function SettingsPanel({
     return (localStorage.getItem("settings_model_generation") as any) || "flash";
   });
 
-  const [usage, setUsage] = useState<{ limit: number; remaining: number } | null>(null);
+  const [usage, setUsage] = useState<{ plan: string; limit: number; remaining: number } | null>(null);
   const [isLoadingUsage, setIsLoadingUsage] = useState(false);
 
   // Action status triggers
@@ -133,12 +133,12 @@ export default function SettingsPanel({
     const fetchUsage = async () => {
       setIsLoadingUsage(true);
       try {
-        const response = await fetch(apiUrl(`/api/usage?tier=${settings.tier}`), {
+        const response = await fetch(apiUrl("/api/usage"), {
           headers: { ...(await getAuthHeaders()) },
         });
         if (response.ok && active) {
           const data = await response.json();
-          setUsage({ limit: data.limit, remaining: data.remaining });
+          setUsage({ plan: data.plan, limit: data.limit, remaining: data.remaining });
         }
       } catch (e) {
         console.error("Error fetching usage from server:", e);
@@ -150,7 +150,7 @@ export default function SettingsPanel({
     return () => {
       active = false;
     };
-  }, [settings.tier, notes.length]);
+  }, [notes.length]);
 
   const handleSaveProfileChanges = () => {
     localStorage.setItem("settings_display_name", displayName);
@@ -313,7 +313,7 @@ export default function SettingsPanel({
                 <div>
                   <h3 className="text-sm font-black text-[#1C1C1E]">{displayName}</h3>
                   <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mt-0.5 font-mono">
-                    {settings.tier === "premium" ? "👑 Premium Plan" : "Free Plan"}
+                    {usage?.plan === "premium" ? "👑 Premium Plan" : "Free Plan"}
                   </p>
                 </div>
               </div>
@@ -647,14 +647,14 @@ export default function SettingsPanel({
                 <TrendingUp className="w-4 h-4 text-blue-600" /> Active Plan Select
               </label>
 
-              <div className={`grid ${settings.tier === "premium" ? "grid-cols-1" : "grid-cols-2"} p-1 bg-[#F2F2F7] rounded-xl border border-[#D1D1D6]`}>
-                {settings.tier !== "premium" && (
+              <div className={`grid ${usage?.plan === "premium" ? "grid-cols-1" : "grid-cols-2"} p-1 bg-[#F2F2F7] rounded-xl border border-[#D1D1D6]`}>
+                {usage?.plan !== "premium" && (
                   <button
                     id="tier-mode-free-btn"
                     type="button"
                     onClick={() => onSaveSettings({ ...settings, tier: "free" })}
                     className={`py-2 rounded-lg text-[11px] font-sans font-extrabold transition-all cursor-pointer ${
-                      settings.tier === "free"
+                      usage?.plan === "free"
                         ? "bg-white text-blue-600 border border-[#D1D1D6] shadow-xs"
                         : "text-gray-500 hover:text-[#1C1C1E]"
                     }`}
@@ -667,7 +667,7 @@ export default function SettingsPanel({
                   type="button"
                   onClick={() => onSaveSettings({ ...settings, tier: "premium" })}
                   className={`py-2 rounded-lg text-[11px] font-sans font-extrabold transition-all cursor-pointer ${
-                    settings.tier === "premium"
+                    usage?.plan === "premium"
                       ? "bg-white text-amber-600 border border-[#D1D1D6] shadow-xs"
                       : "text-gray-500 hover:text-[#1C1C1E]"
                   }`}
@@ -693,10 +693,10 @@ export default function SettingsPanel({
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-xs font-black text-[#1C1C1E] block">
-                        {settings.tier === "premium" ? "👑 NoteWave Pro Plan" : "🟢 Free Account Tier"}
+                        {usage?.plan === "premium" ? "👑 NoteWave Pro Plan" : "🟢 Free Account Tier"}
                       </span>
                       <span className="text-[10.5px] text-gray-500 font-bold block mt-1">
-                        {settings.tier === "premium"
+                        {usage?.plan === "premium"
                           ? "Pro Model: Gemini 3.5 Flash"
                           : "Free Model: Gemini 3.5 Flash"}
                       </span>
@@ -714,7 +714,7 @@ export default function SettingsPanel({
                   {/* Progress bar */}
                   <div className="w-full bg-[#E5E5EA] h-2 rounded-full overflow-hidden">
                     <div 
-                      className={`h-full transition-all duration-500 ${settings.tier === "premium" ? "bg-amber-500" : "bg-blue-600"}`}
+                      className={`h-full transition-all duration-500 ${usage?.plan === "premium" ? "bg-amber-500" : "bg-blue-600"}`}
                       style={{ 
                         width: usage ? `${((usage.limit - usage.remaining) / usage.limit) * 100}%` : "0%" 
                       }}
@@ -774,14 +774,14 @@ export default function SettingsPanel({
                   <Database className="w-4 h-4 text-blue-600" /> {langDict.language === "es" ? "Cuota de Almacenamiento y Límites" : "Storage Quota & Capacity Limits"}
                 </span>
                 <span className="text-[9px] font-mono font-black uppercase px-2 py-0.5 rounded bg-blue-100 text-blue-700 select-none">
-                  {settings.tier === "premium" ? "👑 NoteWave Pro" : "🟢 Free Plan"}
+                  {usage?.plan === "premium" ? "👑 NoteWave Pro" : "🟢 Free Plan"}
                 </span>
               </div>
 
               <div className="flex flex-col gap-3.5 text-xs">
                 {/* 1. Combined note quota (voice notes + uploads): Free 10, Pro 100 */}
                 {(() => {
-                  const noteCap = settings.tier === "premium" ? 100 : 10;
+                  const noteCap = usage?.plan === "premium" ? 100 : 10;
                   const ratio = notes.length / noteCap;
                   return (
                     <div className="flex flex-col gap-1.5">
@@ -806,8 +806,8 @@ export default function SettingsPanel({
                 {/* 2. Combined storage capacity (voice memos + uploads + notes):
                     Free 5 MB, Pro 1 GB. Audio bytes are counted via note.audioBytes. */}
                 {(() => {
-                  const capKB = settings.tier === "premium" ? 1048576 : 51200; // 1 GB / 50 MB
-                  const capStr = settings.tier === "premium" ? "1 GB" : "50 MB";
+                  const capKB = usage?.plan === "premium" ? 1048576 : 51200; // 1 GB / 50 MB
+                  const capStr = usage?.plan === "premium" ? "1 GB" : "50 MB";
                   const usedKB = (totalTextBytes + totalAudioBytes) / 1024;
                   const ratio = usedKB / capKB;
                   const fmt = (kb: number) => (kb >= 1024 ? `${(kb / 1024).toFixed(2)} MB` : `${kb.toFixed(2)} KB`);
@@ -832,7 +832,7 @@ export default function SettingsPanel({
                 })()}
               </div>
 
-              {settings.tier !== "premium" ? (
+              {usage?.plan !== "premium" ? (
                 <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3 flex flex-col gap-2 mt-1">
                   <p className="text-[10px] text-amber-800 font-semibold leading-relaxed">
                     ⚠️ <strong>{langDict.language === "es" ? "Límites del Plan Libre Activos." : "Free Plan Account Limits:"}</strong> {langDict.language === "es" ? "El plan gratuito permite hasta 10 notas y archivos combinados y 50 MB de almacenamiento. Actualiza a Pro para 100 notas y 1 GB de almacenamiento seguro en la nube." : "The free plan allows up to 10 combined notes & uploads and 50 MB of storage. Upgrade to Pro for 100 notes and 1 GB of secure cloud storage."}

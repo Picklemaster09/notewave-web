@@ -51,7 +51,7 @@ export default function AIAgentWorkspace({
     title: isEs ? "Mesa de Trabajo del Agente de IA" : "AI Agent Workspace Board",
     subtitle: isEs 
       ? "Consulta y busca sobre tu base de tareas completa e ideas de diseño usando el sistema RAG inteligente." 
-      : "Query and retrieve details from your entire task base and design ideas using full RAG matching.",
+      : "Query and retrieve details from your entire task base and design ideas.",
     placeholder: isEs ? "Pregúntale al agente sobre tus tareas o ideas..." : "Ask the agent anything about your workspace notes & tasks...",
     rateLimitWarning: isEs 
       ? "Cada consulta consume 1 solicitud diaria. Modo Libre: 3 al día. Premium: 50 al día." 
@@ -440,7 +440,7 @@ export default function AIAgentWorkspace({
       {!inputValue && (
         <div className="flex flex-col gap-2">
           <span className="text-[9.5px] font-mono uppercase font-black tracking-wider text-gray-400 px-1">
-            {isEs ? "Sugerencias de búsqueda rápida (RAG):" : "Quick retrieve suggestions (RAG):"}
+            {isEs ? "Sugerencias de búsqueda rápida (RAG):" : "Quick suggestions:"}
           </span>
           <div className="flex items-center gap-1.5 flex-wrap">
             <button

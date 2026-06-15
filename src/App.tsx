@@ -21,7 +21,7 @@ import { Mic, Settings as SettingsIcon, History, Key, Check, HelpCircle, Layers,
 import { getTranslation, LANGUAGE_OPTIONS } from "./locale";
 import { useAuth0 } from "@auth0/auth0-react";
 import { registerTokenGetter } from "./authToken";
-import { APP_HREF, LANDING_HREF, isLandingHost } from "./config";
+import { apiUrl, APP_HREF, LANDING_HREF, isLandingHost } from "./config";
 
 
 const LOCAL_STORAGE_NOTES_KEY = "notewave_local_notes";
@@ -234,6 +234,39 @@ export default function App() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, auth0User]);
+
+  // Fetch the user's plan from the server on login and sync it with local settings
+  useEffect(() => {
+    let active = true;
+    const fetchServerPlan = async () => {
+      if (!isAuthenticated) return;
+      try {
+        const token = await getAccessTokenSilently();
+        const response = await fetch(apiUrl("/api/usage"), {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok && active) {
+          const data = await response.json();
+          const serverPlan = data.plan === "premium" ? "premium" : "free";
+          // Only update if the server plan differs from local settings
+          if (settings.tier !== serverPlan) {
+            const updatedSettings = { ...settings, tier: serverPlan };
+            setSettings(updatedSettings);
+            localStorage.setItem(LOCAL_STORAGE_SETTINGS_KEY, JSON.stringify(updatedSettings));
+            if (serverPlan === "premium") {
+              localStorage.setItem("notewave_is_pro_purchased", "true");
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("Failed to fetch server plan:", e);
+      }
+    };
+    fetchServerPlan();
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
   
   // Periodically refresh the Auth0 access token so that when the user returns
   // to the app after a long idle period (e.g., days), the token is already valid

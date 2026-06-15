@@ -1,8 +1,8 @@
 import { useState, useRef, FormEvent } from "react";
 import { RecordingNote, SubTodo } from "../types";
-import { 
-  Plus, Calendar, Clock, Trash2, Play, Pause, ListTodo, 
-  Sparkles, ChevronDown, ChevronUp, Bell, Check, Tag, AlertCircle, Search, X
+import {
+  Plus, Calendar, Clock, Trash2, Play, Pause, ListTodo,
+  Sparkles, ChevronDown, ChevronUp, Bell, Check, Tag, AlertCircle, Search, X, Pencil
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 
@@ -11,15 +11,17 @@ interface TasksWorkspaceProps {
   onDeleteNote: (id: string) => void;
   onToggleActionItem: (noteId: string, itemText: string, checked: boolean) => void;
   onAddManualNote: (newNote: RecordingNote) => void;
+  onUpdateNote?: (id: string, patch: Partial<RecordingNote>) => void;
   language?: string;
 }
 
-export default function TasksWorkspace({ 
-  notes, 
-  onDeleteNote, 
-  onToggleActionItem, 
+export default function TasksWorkspace({
+  notes,
+  onDeleteNote,
+  onToggleActionItem,
   onAddManualNote,
-  language = "en" 
+  onUpdateNote,
+  language = "en"
 }: TasksWorkspaceProps) {
   // Global search and status filters
   const [searchTerm, setSearchTerm] = useState("");
@@ -31,6 +33,13 @@ export default function TasksWorkspace({
 
   // Popup Modal state for adding a new task
   const [showAddTaskModal, setShowAddTaskModal] = useState(false);
+
+  // Edit task modal state
+  const [editingNote, setEditingNote] = useState<RecordingNote | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editPriority, setEditPriority] = useState<"Low" | "Medium" | "High" | "Urgent">("Medium");
+  const [editCategory, setEditCategory] = useState<"Work" | "Personal" | "Health" | "Learning" | "Ideas">("Work");
+  const [editScheduledDate, setEditScheduledDate] = useState("");
 
   // New task form fields
   const [taskTitle, setTaskTitle] = useState("");
@@ -101,6 +110,34 @@ export default function TasksWorkspace({
       .catch((err) => console.error("Playback failed:", err));
   };
 
+  // Open edit modal for a task
+  const handleOpenEdit = (note: RecordingNote) => {
+    setEditingNote(note);
+    setEditTitle(note.title);
+    setEditPriority(note.taskPriority || "Medium");
+    setEditCategory(note.taskCategory || "Work");
+    setEditScheduledDate(note.scheduledDate || "");
+  };
+
+  // Save edited task
+  const handleSaveEdit = (e: FormEvent) => {
+    e.preventDefault();
+    if (!editingNote || !editTitle.trim()) return;
+
+    onToggleActionItem?.(editingNote.id, "__UPDATE_METADATA__", false); // Trigger update
+    onUpdateNote?.(editingNote.id, {
+      title: editTitle.trim(),
+      taskPriority: editPriority,
+      taskCategory: editCategory,
+      scheduledDate: editScheduledDate || undefined,
+      // Update tags to reflect new priority/category
+      tags: [editPriority, editCategory, ...(editingNote.tags?.filter(t => !["Low", "Medium", "High", "Urgent", "Work", "Personal", "Health", "Learning", "Ideas", "Manual"].includes(t)) || [])],
+    });
+
+    setEditingNote(null);
+    triggerFlashSuccess(`Task "${editTitle.trim()}" updated successfully!`);
+  };
+
   // Create manual task from modal pop up
   const handleAddTaskSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -115,7 +152,7 @@ export default function TasksWorkspace({
       }
     ];
 
-    const tags = [taskPriority, taskCategory, "Manual"];
+    const tags = [taskPriority, taskCategory];
 
     // Use selected scheduled date or defaults to today
     const finalDate = scheduledDate || new Date().toLocaleDateString();
@@ -132,7 +169,9 @@ export default function TasksWorkspace({
       ideaName: taskCategory,
       scheduledDate: finalDate,
       subTodos: parsedSubTodos,
-      tags: tags,
+      tags,
+      taskPriority,
+      taskCategory,
       modelUsed: "NoteWave Workspace"
     };
 
@@ -177,15 +216,14 @@ export default function TasksWorkspace({
 
     // 3. Priority query state
     if (selectedPriorityFilter !== "all") {
-      const matchesPriority = note.tags?.some(tag => tag.toLowerCase() === selectedPriorityFilter.toLowerCase());
+      const matchesPriority = (note.taskPriority || note.tags?.[0])?.toLowerCase() === selectedPriorityFilter.toLowerCase();
       if (!matchesPriority) return false;
     }
 
     // 4. Category query state
     if (selectedCategoryFilter !== "all") {
-      const matchesCategoryTag = note.tags?.some(tag => tag.toLowerCase() === selectedCategoryFilter.toLowerCase());
-      const matchesIdeaName = note.ideaName?.toLowerCase() === selectedCategoryFilter.toLowerCase();
-      if (!matchesCategoryTag && !matchesIdeaName) return false;
+      const matchesCategoryTag = (note.taskCategory || note.tags?.[1] || note.ideaName)?.toLowerCase() === selectedCategoryFilter.toLowerCase();
+      if (!matchesCategoryTag) return false;
     }
 
     return true;
@@ -406,6 +444,13 @@ export default function TasksWorkspace({
                       </button>
                     )}
                     <button
+                      onClick={() => handleOpenEdit(note)}
+                      className="p-2.5 rounded-xl bg-white hover:bg-blue-50 text-gray-500 hover:text-blue-600 border border-[#D1D1D6] transition-all cursor-pointer"
+                      title="Edit Task"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                    <button
                       onClick={() => setExpandedId(isExpanded ? null : note.id)}
                       className="p-2.5 rounded-xl bg-white hover:bg-slate-50 text-gray-500 hover:text-gray-800 border border-[#D1D1D6] transition-all cursor-pointer"
                     >
@@ -452,10 +497,25 @@ export default function TasksWorkspace({
                       {/* Tasks are pure text — the title + checklist are the content;
                           the raw transcript is intentionally not shown or stored. */}
 
-                      {/* Footer tags and delete options inside expanded body */}
+                      {/* Footer: Priority/Category badges and delete options inside expanded body */}
                       <div className="flex items-center justify-between gap-4 pt-3.5 border-t border-[#E5E5EA]">
                         <div className="flex items-center gap-1.5 flex-wrap">
-                          {note.tags?.map((tag) => (
+                          {note.taskPriority && (
+                            <span className={`text-[9.5px] font-bold px-2 py-0.5 rounded-md border ${
+                              note.taskPriority === "Urgent" ? "bg-red-50 text-red-700 border-red-200" :
+                              note.taskPriority === "High" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                              note.taskPriority === "Medium" ? "bg-blue-50 text-blue-700 border-blue-200" :
+                              "bg-green-50 text-green-700 border-green-200"
+                            }`}>
+                              ⚡ {note.taskPriority}
+                            </span>
+                          )}
+                          {note.taskCategory && (
+                            <span className="text-[9.5px] font-bold text-gray-600 bg-slate-100 border border-[#E5E5EA] px-2 py-0.5 rounded-md">
+                              📁 {note.taskCategory}
+                            </span>
+                          )}
+                          {note.tags?.filter(t => !["Low", "Medium", "High", "Urgent", "Work", "Personal", "Health", "Learning", "Ideas", "Manual"].includes(t)).map((tag) => (
                             <span key={tag} className="text-[9.5px] font-bold text-gray-500 bg-slate-100 border border-[#E5E5EA] px-2 py-0.5 rounded-md">
                               #{tag}
                             </span>
@@ -477,6 +537,129 @@ export default function TasksWorkspace({
           })
         )}
       </div>
+
+      {/* EDIT TASK MODAL */}
+      <AnimatePresence>
+        {editingNote && (
+          <div className="fixed inset-0 bg-black/55 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="bg-white card-theme text-[#1C1C1E] text-primary-theme w-full max-w-md rounded-2xl border border-[#E5E5EA] shadow-2xl p-6 relative font-sans"
+            >
+              {/* Close Button X */}
+              <button
+                type="button"
+                onClick={() => setEditingNote(null)}
+                className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 p-1.5 rounded-full hover:bg-slate-100 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              {/* Header Title */}
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-100 flex items-center justify-center text-blue-600">
+                  <Pencil className="w-4 h-4 stroke-[2]" />
+                </div>
+                <div>
+                  <h2 className="text-base font-black tracking-tight">{language === "es" ? "Editar Tarea" : "Edit Task"}</h2>
+                  <p className="text-[10px] text-gray-400 uppercase font-mono font-bold tracking-wider">{language === "es" ? "Modificar Tarea Existente" : "Modify Existing Task"}</p>
+                </div>
+              </div>
+
+              {/* Form elements */}
+              <form onSubmit={handleSaveEdit} className="flex flex-col gap-4">
+                
+                {/* Task Title Input */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase font-bold text-gray-500">{getLabel("taskTitle")}</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex. Wash the car or prepare proposal draft"
+                    value={editTitle}
+                    onChange={(e) => setEditTitle(e.target.value)}
+                    className="w-full bg-white text-xs text-[#1C1C1E] placeholder-gray-400 px-3.5 py-2.5 rounded-xl border border-[#E5E5EA] focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold"
+                  />
+                </div>
+
+                {/* Date Input */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase font-bold text-gray-500">{getLabel("schedDate")}</label>
+                  <input
+                    type="date"
+                    value={editScheduledDate}
+                    onChange={(e) => setEditScheduledDate(e.target.value)}
+                    className="w-full bg-white text-xs text-[#1C1C1E] px-3.5 py-2.5 rounded-xl border border-[#E5E5EA] focus:outline-none focus:ring-1 focus:ring-blue-500 font-semibold cursor-pointer"
+                  />
+                </div>
+
+                {/* Priority Selector Grid */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase font-bold text-gray-500">{getLabel("priority")}</label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {(["Low", "Medium", "High", "Urgent"] as const).map((prio) => (
+                      <button
+                        type="button"
+                        key={prio}
+                        onClick={() => setEditPriority(prio)}
+                        className={`py-2 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer ${
+                          editPriority === prio
+                            ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                            : "bg-white text-gray-500 border-[#E5E5EA] hover:bg-slate-50"
+                        }`}
+                      >
+                        {prio}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Category Selector Grid */}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[10px] uppercase font-bold text-gray-500">{getLabel("typeCategory")}</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {(["Work", "Personal", "Health", "Learning", "Ideas"] as const).map((cat) => (
+                      <button
+                        type="button"
+                        key={cat}
+                        onClick={() => setEditCategory(cat)}
+                        className={`py-2 rounded-lg text-[10px] font-extrabold border transition-all cursor-pointer ${
+                          editCategory === cat
+                            ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                            : "bg-white text-gray-500 border-[#E5E5EA] hover:bg-slate-50"
+                        }`}
+                      >
+                        {cat}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Action CTA Buttons */}
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E5E5EA] mt-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingNote(null)}
+                    className="text-xs font-extrabold text-gray-500 hover:text-gray-800 px-3 py-2 cursor-pointer transition-all"
+                  >
+                    {getLabel("cancel")}
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-blue-600 hover:bg-blue-700 text-white font-black text-xs px-4 py-2.5 rounded-xl transition-all shadow-3xs flex items-center justify-center gap-1.5"
+                  >
+                    <Check className="w-3.5 h-3.5 stroke-[2]" />
+                    {language === "es" ? "Guardar Cambios" : "Save Changes"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* DIALOG POP-UP MODAL WINDOW FOR NEW TASKS ADDITION */}
       <AnimatePresence>

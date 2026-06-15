@@ -308,6 +308,8 @@ export default function RecordingSlate({
         projectStartDate: data.projectStartDate || "",
         isComplex: !!data.isComplex,
         subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
+        taskPriority: data.taskPriority || undefined,
+        taskCategory: data.taskCategory || undefined,
         tags: (data.tags ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags) : ["audio"]).concat("voice"),
         modelUsed: result.model || fallbackModel,
         // Audio (R2 key or inline base64) is kept only for ideas/notes; tasks

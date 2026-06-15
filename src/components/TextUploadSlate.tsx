@@ -108,6 +108,8 @@ export default function TextUploadSlate({
         projectStartDate: data.projectStartDate || "",
         isComplex: !!data.isComplex,
         subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
+        taskPriority: data.taskPriority || undefined,
+        taskCategory: data.taskCategory || undefined,
         tags: (data.tags
           ? (typeof data.tags === "string" ? data.tags.split(",").map((s: string) => s.trim()) : data.tags)
           : ["document"]).concat("uploaded"),

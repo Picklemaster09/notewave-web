@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useRef, MouseEvent, FormEvent } from "react";
+import React, { useState, useEffect, useRef, MouseEvent, FormEvent, ChangeEvent } from "react";
 import { RecordingNote, SubTodo, UserTier } from "../types";
-import { 
-  Search, Play, Pause, Trash2, Calendar, Clock, Sparkles, 
-  Tag, Cpu, ChevronDown, ChevronUp, Check, Headphones, 
-  ListTodo, Rocket, FileText, Plus, AlertCircle, Loader2
+import {
+  Search, Play, Pause, Trash2, Calendar, Clock, Sparkles,
+  Tag, Cpu, ChevronDown, ChevronUp, Check, Headphones,
+  ListTodo, Rocket, FileText, Plus, AlertCircle, Loader2, Pencil, X
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getTranslation } from "../locale";
@@ -152,6 +152,7 @@ interface NoteCardInternalProps {
   onPlayAudio: (note: RecordingNote) => void;
   onDeleteNote: (id: string) => void;
   onToggleActionItem: (noteId: string, itemText: string, checked: boolean) => void;
+  onUpdateNote?: (id: string, patch: Partial<RecordingNote>) => void;
   complexTaskExpand: Record<string, boolean>;
   onToggleComplexRoadmap: (e: MouseEvent, id: string) => void;
   getCompletedSubTodosCount: (note: RecordingNote) => { total: number; completed: number };
@@ -168,6 +169,7 @@ function NoteCardInternal({
   onPlayAudio,
   onDeleteNote,
   onToggleActionItem,
+  onUpdateNote,
   complexTaskExpand,
   onToggleComplexRoadmap,
   getCompletedSubTodosCount,
@@ -176,6 +178,66 @@ function NoteCardInternal({
   language
 }: NoteCardInternalProps) {
   const [realDuration, setRealDuration] = useState<number | null>(null);
+  const [editingChecklist, setEditingChecklist] = useState(false);
+  const [editSubTodos, setEditSubTodos] = useState<SubTodo[]>([]);
+
+  // Start editing checklist
+  const startEditChecklist = () => {
+    setEditSubTodos([...(note.subTodos || [])]);
+    setEditingChecklist(true);
+  };
+
+  // Save edited checklist
+  const saveEditChecklist = () => {
+    onUpdateNote?.(note.id, { subTodos: editSubTodos });
+    setEditingChecklist(false);
+  };
+
+  // Cancel editing checklist
+  const cancelEditChecklist = () => {
+    setEditingChecklist(false);
+  };
+
+  // Add new todo item
+  const addTodoItem = () => {
+    const newTodo: SubTodo = {
+      id: `sub_${Date.now()}`,
+      text: "",
+      completed: false
+    };
+    setEditSubTodos([...editSubTodos, newTodo]);
+  };
+
+  // Delete todo item
+  const deleteTodoItem = (id: string) => {
+    setEditSubTodos(editSubTodos.filter(t => t.id !== id));
+  };
+
+  // Update todo text
+  const updateTodoText = (id: string, text: string) => {
+    setEditSubTodos(editSubTodos.map(t => t.id === id ? { ...t, text } : t));
+  };
+
+  // Toggle todo completed in edit mode
+  const toggleTodoCompleted = (id: string) => {
+    setEditSubTodos(editSubTodos.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+  };
+
+  // Move todo up
+  const moveTodoUp = (index: number) => {
+    if (index === 0) return;
+    const newTodos = [...editSubTodos];
+    [newTodos[index - 1], newTodos[index]] = [newTodos[index], newTodos[index - 1]];
+    setEditSubTodos(newTodos);
+  };
+
+  // Move todo down
+  const moveTodoDown = (index: number) => {
+    if (index === editSubTodos.length - 1) return;
+    const newTodos = [...editSubTodos];
+    [newTodos[index], newTodos[index + 1]] = [newTodos[index + 1], newTodos[index]];
+    setEditSubTodos(newTodos);
+  };
 
   useEffect(() => {
     if (note.audioData) {
@@ -400,9 +462,102 @@ function NoteCardInternal({
             {/* Subtodos checkable roadmaps logs */}
             {note.subTodos && note.subTodos.length > 0 && (
               <div className="flex flex-col gap-2.5">
-                <span className="text-[10px] font-mono uppercase font-black tracking-wider text-gray-400">Step checklist tasks:</span>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono uppercase font-black tracking-wider text-gray-400">Step checklist tasks:</span>
+                  {!editingChecklist && (
+                    <button
+                      onClick={startEditChecklist}
+                      className="text-[9.5px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-all"
+                    >
+                      <Pencil className="w-3 h-3" />
+                      {language === "es" ? "Editar" : "Edit"}
+                    </button>
+                  )}
+                </div>
                 
-                {note.isComplex ? (
+                {editingChecklist ? (
+                  // Edit mode for checklist
+                  <div className="flex flex-col gap-2 p-3.5 rounded-xl bg-blue-50/30 border border-blue-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-[10px] font-mono uppercase font-bold text-blue-700">
+                        {language === "es" ? "Editando lista de tareas" : "Editing Checklist"}
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={cancelEditChecklist}
+                          className="text-[9.5px] font-bold text-gray-500 hover:text-gray-700 px-2 py-1 rounded transition-all"
+                        >
+                          {language === "es" ? "Cancelar" : "Cancel"}
+                        </button>
+                        <button
+                          onClick={saveEditChecklist}
+                          className="text-[9.5px] font-bold text-white bg-blue-600 hover:bg-blue-700 px-2 py-1 rounded transition-all"
+                        >
+                          {language === "es" ? "Guardar" : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                    {editSubTodos.map((todo, index) => (
+                      <div key={todo.id} className="flex items-center gap-2 group">
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => toggleTodoCompleted(todo.id)}
+                          className="shrink-0"
+                        >
+                          {todo.completed ? (
+                            <div className="p-0.5 rounded bg-green-50 text-green-600 border border-green-200">
+                              <Check className="w-3 h-3 text-green-600 stroke-[3]" />
+                            </div>
+                          ) : (
+                            <div className="w-4 h-4 rounded border border-gray-300 bg-white" />
+                          )}
+                        </button>
+                        {/* Text input */}
+                        <input
+                          type="text"
+                          value={todo.text}
+                          onChange={(e: ChangeEvent<HTMLInputElement>) => updateTodoText(todo.id, e.target.value)}
+                          className="flex-1 text-xs font-semibold bg-white border border-[#E5E5EA] rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          placeholder={language === "es" ? "Nombre de la tarea..." : "Task name..."}
+                        />
+                        {/* Move up */}
+                        <button
+                          onClick={() => moveTodoUp(index)}
+                          disabled={index === 0}
+                          className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition-all"
+                          title={language === "es" ? "Mover arriba" : "Move up"}
+                        >
+                          <ChevronUp className="w-3 h-3 text-gray-500" />
+                        </button>
+                        {/* Move down */}
+                        <button
+                          onClick={() => moveTodoDown(index)}
+                          disabled={index === editSubTodos.length - 1}
+                          className="p-1 rounded hover:bg-slate-200 disabled:opacity-30 transition-all"
+                          title={language === "es" ? "Mover abajo" : "Move down"}
+                        >
+                          <ChevronDown className="w-3 h-3 text-gray-500" />
+                        </button>
+                        {/* Delete */}
+                        <button
+                          onClick={() => deleteTodoItem(todo.id)}
+                          className="p-1 rounded hover:bg-red-100 text-red-500 transition-all"
+                          title={language === "es" ? "Eliminar" : "Delete"}
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ))}
+                    {/* Add new item button */}
+                    <button
+                      onClick={addTodoItem}
+                      className="text-[9.5px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 mt-1 transition-all"
+                    >
+                      <Plus className="w-3 h-3" />
+                      {language === "es" ? "Añadir tarea" : "Add Task"}
+                    </button>
+                  </div>
+                ) : note.isComplex ? (
                   <div className="flex flex-col gap-2">
                     <div
                       onClick={(e) => onToggleComplexRoadmap(e, note.id)}
@@ -720,6 +875,8 @@ export default function NotesHistory({
         projectStartDate: data.projectStartDate || undefined,
         isComplex: !!data.isComplex,
         subTodos: Array.isArray(data.subTodos) ? data.subTodos : [],
+        taskPriority: data.taskPriority || undefined,
+        taskCategory: data.taskCategory || undefined,
         tags: Array.from(new Set([
           ...parsedTags,
           ...(data.tags
@@ -1062,6 +1219,7 @@ export default function NotesHistory({
               onPlayAudio={handlePlayAudio}
               onDeleteNote={onDeleteNote}
               onToggleActionItem={onToggleActionItem}
+              onUpdateNote={onUpdateNote}
               complexTaskExpand={complexTaskExpand}
               onToggleComplexRoadmap={toggleComplexRoadmap}
               getCompletedSubTodosCount={getCompletedSubTodosCount}

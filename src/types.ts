@@ -28,6 +28,9 @@ export interface RecordingNote {
   isComplex?: boolean; // whether the idea is complex and has multiple sub-tasks
   subTodos: SubTodo[]; // list of actionable checkpoints that can be checked off
   tags: string[];
+  // Task-specific fields (for reminders category)
+  taskPriority?: "Low" | "Medium" | "High" | "Urgent";
+  taskCategory?: "Work" | "Personal" | "Health" | "Learning" | "Ideas";
   audioData?: string; // legacy base64 audio (older locally-stored notes)
   audioKey?: string; // R2 object key for cloud-stored audio; played back via /api/audio
   audioBytes?: number; // size of the stored audio in bytes (for storage accounting)

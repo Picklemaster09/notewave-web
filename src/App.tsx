@@ -906,6 +906,7 @@ export default function App() {
                   onDeleteNote={handleDeleteNote}
                   onToggleActionItem={handleToggleActionItem}
                   onAddManualNote={handleAddNewNote}
+                  onUpdateNote={updateNote}
                   language={settings.language}
                 />
               )}

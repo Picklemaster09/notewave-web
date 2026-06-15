@@ -310,7 +310,9 @@ Return EXACTLY one valid JSON object (no markdown fences, no extra text) with th
   "projectStartDate": "(any specified start time; else '')",
   "isComplex": (true if a complex app/tool/software project needing modular work, else false),
   "subTodos": [ { "id": "sub_1", "text": "Detailed micro-task", "completed": false } ],
-  "tags": "(2-3 comma-separated relevant tags)"
+  "taskPriority": "(ONE OF: 'Low', 'Medium', 'High', 'Urgent' - assess based on context. For reminders/tasks, pick the appropriate urgency. For ideas/notes, default to 'Medium')",
+  "taskCategory": "(ONE OF: 'Work', 'Personal', 'Health', 'Learning', 'Ideas' - classify based on content topic)",
+  "tags": "(2-3 comma-separated relevant topic tags, NOT including priority or category)"
 }
 ${todoTail}`;
 }
@@ -329,6 +331,8 @@ function safeParse(text, fallbackTranscript) {
       projectStartDate: "",
       isComplex: false,
       subTodos: [],
+      taskPriority: "Medium",
+      taskCategory: "Personal",
       tags: "voice",
     };
   }
@@ -397,6 +401,8 @@ function noteToDb(n, userId) {
     is_complex: !!n.isComplex,
     sub_todos: n.subTodos || [],
     tags: n.tags || [],
+    task_priority: n.taskPriority || null,
+    task_category: n.taskCategory || null,
     model_used: n.modelUsed || "gemini",
     duration: Math.round(Number(n.duration || 0)),
     audio_key: n.audioKey || null,
@@ -419,6 +425,8 @@ function noteToClient(r) {
     isComplex: r.is_complex,
     subTodos: r.sub_todos || [],
     tags: r.tags || [],
+    taskPriority: r.task_priority || undefined,
+    taskCategory: r.task_category || undefined,
     modelUsed: r.model_used,
     duration: r.duration || 0,
     audioKey: r.audio_key || null,

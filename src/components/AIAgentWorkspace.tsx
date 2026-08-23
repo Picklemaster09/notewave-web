@@ -53,9 +53,6 @@ export default function AIAgentWorkspace({
       ? "Consulta y busca sobre tu base de tareas completa e ideas de diseño usando el sistema RAG inteligente." 
       : "Query and retrieve details from your entire task base and design ideas.",
     placeholder: isEs ? "Pregúntale al agente sobre tus tareas o ideas..." : "Ask the agent anything about your workspace notes & tasks...",
-    rateLimitWarning: isEs 
-      ? "Cada consulta consume 1 solicitud diaria. Modo Libre: 3 al día. Premium: 50 al día." 
-      : "Each query consumes 1 prompt request. Free Mode: 3/day. Premium Mode: 50/day.",
     noMessages: isEs 
       ? "¡Sola con tu imaginación! Haz una pregunta o selecciona una sugerencia a continuación para iniciar la búsqueda RAG." 
       : "Start chat! Ask a question or click a suggestion below to search through your workspace.",
@@ -516,7 +513,10 @@ export default function AIAgentWorkspace({
 
       {/* Helper Footer Subtext */}
       <div className="flex justify-between items-center text-[9px] text-gray-400 font-bold px-1 select-none">
-        <span>🤖 {t.rateLimitWarning}</span>
+        <span>
+          🤖 {isEs ? "Cada consulta consume 1 solicitud diaria." : "Each query consumes 1 prompt request."}
+          {rateLimitInfo && ` ${tier === "premium" ? (isEs ? "Premium" : "Premium Mode") : (isEs ? "Modo Libre" : "Free Mode")}: ${rateLimitInfo.limit}/${isEs ? "al día" : "day"}.`}
+        </span>
         <span>Secure NoteWave Proxy</span>
       </div>
 

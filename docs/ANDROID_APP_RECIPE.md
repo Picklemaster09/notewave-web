@@ -24,8 +24,8 @@ You already have the **NoteWave Android** app configured in Auth0 (Native type).
 |----------|-------|
 | **App Name** | NoteWave Android |
 | **Type** | Native |
-| **Client ID** | `MEnHjqTVml8sN8oF6yOLq7NmsO8ua7nn` |
-| **Domain** | `notewave.eu.auth0.com` |
+| **Client ID** | `<ANDROID_CLIENT_ID>` |
+| **Domain** | `<YOUR_AUTH0_DOMAIN>` |
 
 ### Required Auth0 Dashboard Settings
 
@@ -135,7 +135,7 @@ Create `src/config.ts`:
 
 ```typescript
 // API Configuration
-export const API_BASE_URL = "https://napi.ccma-fetch.space";
+export const API_BASE_URL = "https://api.yourdomain.com";
 
 export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -143,8 +143,8 @@ export function apiUrl(path: string): string {
 
 // Auth0 Configuration
 export const AUTH0_CONFIG = {
-  domain: "notewave.eu.auth0.com",
-  clientId: "MEnHjqTVml8sN8oF6yOLq7NmsO8ua7nn",
+  domain: "<YOUR_AUTH0_DOMAIN>",
+  clientId: "<ANDROID_CLIENT_ID>",
   redirectUri: "com.notewave.app://com.notewave.app/callback",
   // Optional: set if you have an Auth0 API resource
   // audience: "https://notewave-api",
@@ -1246,3 +1246,5 @@ eas submit --platform android
 - [ ] Verify API calls with real Auth0 tokens
 - [ ] Build production AAB (`eas build --platform android --profile production`)
 - [ ] Submit to Google Play Store
+
+

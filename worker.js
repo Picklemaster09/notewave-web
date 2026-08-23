@@ -1,5 +1,5 @@
 /**
- * NoteWave API — single Cloudflare Worker for napi.ccma-fetch.space
+ * NoteWave API — single Cloudflare Worker for api.yourdomain.com
  * One worker handles ALL paths (routed internally by url.pathname).
  *
  * Verifies the Auth0 access token (RS256), proxies AI to Gemini with a
@@ -18,7 +18,7 @@
  *                     OPENAI_API_KEY (optional — fallback when Gemini is overloaded)
  *   (Optional) KV binding named RATE_LIMIT for real rate limiting.
  *   (Optional) R2 bucket binding named AUDIO for voice-memo storage.
- *   Settings -> Domains & Routes: add custom domain napi.ccma-fetch.space
+ *   Settings -> Domains & Routes: add custom domain api.yourdomain.com
  */
 
 // ---------- CORS ----------
@@ -842,3 +842,4 @@ export default {
     }
   },
 };
+

@@ -176,9 +176,9 @@ NoteWave uses **Auth0** for user authentication with PKCE flow (no client secret
 
 | Platform | Type | Client ID |
 |----------|------|-----------|
-| **Web** | Single Page Application | `mjHg2X98t67ZQwMR5URbkDWQB6niGn7O` |
-| **Android** | Native | `MEnHjqTVml8sN8oF6yOLq7NmsO8ua7nn` |
-| **iOS** | Native | `sI7yyDSnu5Jrzab6JcXkJzj5zB7YgbVX` |
+| **Web** | Single Page Application | `<WEB_CLIENT_ID>` |
+| **Android** | Native | `<ANDROID_CLIENT_ID>` |
+| **iOS** | Native | `<IOS_CLIENT_ID>` |
 | **API (Test)** | Machine to Machine | `u1ZgUAKyjSRXqPpnLVLDxsUMbhEYDu9I` |
 | **API (Test)** | Machine to Machine | `pbfDEU8qzsNIpaV3U8vcJeNcmZIq4rI` |
 
@@ -194,7 +194,7 @@ NoteWave uses **Auth0** for user authentication with PKCE flow (no client secret
 
 ## API Endpoints
 
-All endpoints are served by a single Cloudflare Worker at `https://napi.ccma-fetch.space`.
+All endpoints are served by a single Cloudflare Worker at `https://api.yourdomain.com`.
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
@@ -233,8 +233,8 @@ npm install
 cp .env.example .env
 
 # Edit .env with your Auth0 credentials
-# VITE_AUTH0_DOMAIN=notewave.eu.auth0.com
-# VITE_AUTH0_CLIENT_ID=mjHg2X98t67ZQwMR5URbkDWQB6niGn7O
+# VITE_AUTH0_DOMAIN=<YOUR_AUTH0_DOMAIN>
+# VITE_AUTH0_CLIENT_ID=<WEB_CLIENT_ID>
 
 # Start development server
 npm run dev
@@ -278,7 +278,7 @@ The backend is a single Cloudflare Worker. See [`worker.js`](worker.js) for the 
 
 ### Deployment Steps
 
-1. Create Cloudflare Worker at `napi.ccma-fetch.space`
+1. Create Cloudflare Worker at `api.yourdomain.com`
 2. Set environment variables (see [`docs/BACKEND_API.md`](docs/BACKEND_API.md))
 3. Bind KV namespace (`RATE_LIMIT`) and R2 bucket (`AUDIO`)
 4. Deploy `worker.js`
@@ -311,3 +311,5 @@ Private - All rights reserved.
 ## Support
 
 For issues or questions, contact the development team.
+
+

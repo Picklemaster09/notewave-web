@@ -8,8 +8,8 @@ import './index.css';
 // Public Auth0 SPA config — these are identifiers, not secrets, and ship safely
 // in the bundle (the real protection is Auth0's Allowed Callback URLs). Override
 // via VITE_ env vars at build time if needed.
-const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN || "notewave.eu.auth0.com";
-const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "mjHg2X98t67ZQwMR5URbkDWQB6niGn7O";
+const auth0Domain = import.meta.env.VITE_AUTH0_DOMAIN || "";
+const auth0ClientId = import.meta.env.VITE_AUTH0_CLIENT_ID || "";
 // Optional: set once you create an Auth0 API so the access token is a JWT for your backend.
 const auth0Audience = import.meta.env.VITE_AUTH0_AUDIENCE;
 

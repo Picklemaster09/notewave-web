@@ -438,3 +438,5 @@ npx expo install expo-task-manager expo-background-fetch
 6. Verify auto-sync triggers
 7. Check notes appear on web dashboard
 8. Make change on web → verify syncs to mobile
+
+

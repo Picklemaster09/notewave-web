@@ -2,7 +2,7 @@
 
 ## Overview
 
-NoteWave backend is a **single Cloudflare Worker** deployed at `https://napi.ccma-fetch.space`. It handles all API routing, authentication, AI processing, and data persistence in one edge-compute file ([`worker.js`](worker.js)).
+NoteWave backend is a **single Cloudflare Worker** deployed at `https://api.yourdomain.com`. It handles all API routing, authentication, AI processing, and data persistence in one edge-compute file ([`worker.js`](worker.js)).
 
 ### Architecture Diagram
 
@@ -36,9 +36,9 @@ Cloudflare Worker->>User Mobile App: JSON Response
 ### Plaintext Variables
 | Variable | Example | Description |
 |----------|---------|-------------|
-| `AUTH0_DOMAIN` | `notewave.eu.auth0.com` | Auth0 tenant domain |
+| `AUTH0_DOMAIN` | `<YOUR_AUTH0_DOMAIN>` | Auth0 tenant domain |
 | `AUTH0_AUDIENCE` | `https://notewave-api` | API identifier for JWT audience validation |
-| `ALLOWED_ORIGIN` | `https://notewave.ccma-fetch.space` | CORS allowed origin |
+| `ALLOWED_ORIGIN` | `https://app.yourdomain.com` | CORS allowed origin |
 | `GEMINI_MODEL` | `gemini-3.5-flash` | Gemini model slug |
 | `SUPABASE_URL` | `https://xxx.supabase.co` | Supabase project URL |
 
@@ -59,7 +59,7 @@ Cloudflare Worker->>User Mobile App: JSON Response
 
 ## API Endpoints
 
-**Base URL:** `https://napi.ccma-fetch.space`
+**Base URL:** `https://api.yourdomain.com`
 
 All endpoints except `/api/health` and `/api/usage` require a valid Auth0 access token in the `Authorization: Bearer <token>` header.
 
@@ -391,3 +391,5 @@ Rate limit keys are per-calendar-day (UTC), resetting at midnight UTC.
 5. **Send base64 data URL** format: `data:audio/webm;base64,...`
 6. **Handle rate limits** - Show user their remaining quota from `/api/usage`
 7. **Offline support** - Store notes locally, sync when online via `/api/notes/sync`
+
+

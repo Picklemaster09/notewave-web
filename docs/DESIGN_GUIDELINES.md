@@ -562,3 +562,5 @@ Updated note card design showing sync status:
 - [ ] Pending sync counter is shown on History tab
 - [ ] Conflict resolution screen is accessible from Settings
 - [ ] Offline settings are clearly labeled in Settings screen
+
+

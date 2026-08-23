@@ -7,7 +7,7 @@
 //
 // Override per-environment with a VITE_API_BASE_URL entry in .env if needed
 // (e.g. when pointing the local dev server at a staging API).
-const DEFAULT_API_BASE = "https://napi.ccma-fetch.space";
+const DEFAULT_API_BASE = "";
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE).replace(/\/+$/, "");
 

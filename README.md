@@ -32,9 +32,9 @@ npm run dev
 
 | Platform | Client ID | Type |
 |----------|-----------|------|
-| Web | `mjHg2X98t67ZQwMR5URbkDWQB6niGn7O` | SPA |
-| Android | `MEnHjqTVml8sN8oF6yOLq7NmsO8ua7nn` | Native |
-| iOS | `sI7yyDSnu5Jrzab6JcXkJzj5zB7YgbVX` | Native |
+| Web | `<YOUR_WEB_CLIENT_ID>` | SPA |
+| Android | `<YOUR_ANDROID_CLIENT_ID>` | Native |
+| iOS | `<YOUR_IOS_CLIENT_ID>` | Native |
 
 ## Project Structure
 
@@ -61,7 +61,7 @@ See the [`docs/`](docs/) directory for complete build recipes:
 
 ## API
 
-All API calls go through the Cloudflare Worker at `https://napi.ccma-fetch.space`.
+All API calls go through the Cloudflare Worker you have deployed.
 
 See [`docs/BACKEND_API.md`](docs/BACKEND_API.md) for the full endpoint reference.
 

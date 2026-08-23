@@ -135,7 +135,7 @@ npm install react-native-render-markdown
         "UIBackgroundModes": ["audio"]
       },
       "associatedDomains": [
-        "applinks:ccma-fetch.space"
+        "applinks:yourdomain.com"
       ]
     },
     "android": {
@@ -171,18 +171,18 @@ Create `src/config.ts`:
 import { Platform } from 'react-native';
 
 // API Configuration
-export const API_BASE_URL = "https://napi.ccma-fetch.space";
+export const API_BASE_URL = "https://api.yourdomain.com";
 
 export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
 }
 
 // Auth0 Configuration - Platform-Specific Client IDs
-const ANDROID_CLIENT_ID = "MEnHjqTVml8sN8oF6yOLq7NmsO8ua7nn";
-const IOS_CLIENT_ID = "sI7yyDSnu5Jrzab6JcXkJzj5zB7YgbVX";
+const ANDROID_CLIENT_ID = "<ANDROID_CLIENT_ID>";
+const IOS_CLIENT_ID = "<IOS_CLIENT_ID>";
 
 export const AUTH0_CONFIG = {
-  domain: "notewave.eu.auth0.com",
+  domain: "<YOUR_AUTH0_DOMAIN>",
   clientId: Platform.OS === 'ios' ? IOS_CLIENT_ID : ANDROID_CLIENT_ID,
   redirectUri: "com.notewave.app://com.notewave.app/callback",
   scope: "openid profile email",
@@ -1517,3 +1517,5 @@ sequenceDiagram
     Widget->>Widget: Render UI
 ```
 4. Configure store listing and pricing
+
+

@@ -14,8 +14,8 @@ You already have the **NoteWave iOS** app configured in Auth0 (Native type).
 |----------|-------|
 | **App Name** | NoteWave iOS |
 | **Type** | Native |
-| **Client ID** | `sI7yyDSnu5Jrzab6JcXkJzj5zB7YgbVX` |
-| **Domain** | `notewave.eu.auth0.com` |
+| **Client ID** | `<IOS_CLIENT_ID>` |
+| **Domain** | `<YOUR_AUTH0_DOMAIN>` |
 
 ### Required Auth0 Dashboard Settings
 
@@ -204,7 +204,7 @@ The sync manager is identical to Android. See [`docs/ANDROID_APP_RECIPE.md`](doc
         "UIViewControllerBasedStatusBarAppearance": false
       },
       "associatedDomains": [
-        "applinks:ccma-fetch.space"
+        "applinks:yourdomain.com"
       ]
     },
     "android": {
@@ -220,7 +220,7 @@ Create `src/config.ts`:
 
 ```typescript
 // API Configuration
-export const API_BASE_URL = "https://napi.ccma-fetch.space";
+export const API_BASE_URL = "https://api.yourdomain.com";
 
 export function apiUrl(path: string): string {
   return `${API_BASE_URL}${path}`;
@@ -228,8 +228,8 @@ export function apiUrl(path: string): string {
 
 // Auth0 Configuration - iOS
 export const AUTH0_CONFIG = {
-  domain: "notewave.eu.auth0.com",
-  clientId: "sI7yyDSnu5Jrzab6JcXkJzj5zB7YgbVX",  // iOS Client ID
+  domain: "<YOUR_AUTH0_DOMAIN>",
+  clientId: "<IOS_CLIENT_ID>",  // iOS Client ID
   redirectUri: "com.notewave.app://com.notewave.app/callback",
   scope: "openid profile email",
   // audience: "https://notewave-api", // Optional
@@ -241,11 +241,11 @@ export const AUTH0_CONFIG = {
 ```typescript
 import { Platform } from 'react-native';
 
-const ANDROID_CLIENT_ID = "MEnHjqTVml8sN8oF6yOLq7NmsO8ua7nn";
-const IOS_CLIENT_ID = "sI7yyDSnu5Jrzab6JcXkJzj5zB7YgbVX";
+const ANDROID_CLIENT_ID = "<ANDROID_CLIENT_ID>";
+const IOS_CLIENT_ID = "<IOS_CLIENT_ID>";
 
 export const AUTH0_CONFIG = {
-  domain: "notewave.eu.auth0.com",
+  domain: "<YOUR_AUTH0_DOMAIN>",
   clientId: Platform.OS === 'ios' ? IOS_CLIENT_ID : ANDROID_CLIENT_ID,
   redirectUri: "com.notewave.app://com.notewave.app/callback",
   scope: "openid profile email",
@@ -766,8 +766,8 @@ eas submit --platform ios
 | **Subtitle** | AI Voice Notes & Tasks |
 | **Description** | Record voice notes, get AI-powered transcriptions, action items, and task management. Powered by Gemini AI. |
 | **Keywords** | voice notes, AI, transcription, tasks, productivity, reminders |
-| **Support URL** | https://notewave.ccma-fetch.space/support |
-| **Privacy URL** | https://notewave.ccma-fetch.space/privacy |
+| **Support URL** | https://app.yourdomain.com/support |
+| **Privacy URL** | https://app.yourdomain.com/privacy |
 
 ### Privacy Nutrition Labels
 
@@ -798,3 +798,5 @@ const audioFormat = Platform.OS === 'ios'
   ? Audio.RecordingOptionsFormat.AAC 
   : Audio.RecordingOptionsFormat.DEFAULT;
 ```
+
+

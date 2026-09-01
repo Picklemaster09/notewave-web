@@ -1,5 +1,5 @@
 /**
- * NoteWave API — single Cloudflare Worker for api.yourdomain.com
+ * NoteWave API — single Cloudflare Worker for napi.ccma-fetch.space
  * One worker handles ALL paths (routed internally by url.pathname).
  *
  * Verifies the Auth0 access token (RS256), proxies AI to Gemini with a
@@ -18,7 +18,7 @@
  *                     OPENAI_API_KEY (optional — fallback when Gemini is overloaded)
  *   (Optional) KV binding named RATE_LIMIT for real rate limiting.
  *   (Optional) R2 bucket binding named AUDIO for voice-memo storage.
- *   Settings -> Domains & Routes: add custom domain api.yourdomain.com
+ *   Settings -> Domains & Routes: add custom domain napi.ccma-fetch.space
  */
 
 // ---------- CORS ----------
@@ -370,10 +370,13 @@ async function resolveUserId(env, sub, email) {
   const ins = await sb(env, "users", {
     method: "POST",
     headers: { Prefer: "return=representation" },
-    body: JSON.stringify({ auth0_id: sub, email: email || null, plan: "free" }),
+    body: JSON.stringify({ auth0_id: sub, plan: "free", ...(email ? { email } : {}) }),
   });
   const created = await ins.json();
   const id = created?.[0]?.id;
+  if (!id) {
+    throw new Error(`Failed to create user in DB: ${JSON.stringify(created)}`);
+  }
   await sb(env, "user_settings", {
     method: "POST",
     body: JSON.stringify({
@@ -682,7 +685,10 @@ async function handleSyncNotes(env, req, claims) {
     const plan = await getPlan(env, claims.sub);
     const limit = noteLimit(plan);
     const existing = await sb(env, `notes?user_id=eq.${userId}&select=id`);
-    const ids = new Set(((await existing.json().catch(() => [])) || []).map((r) => r.id));
+    const existingJson = await existing.json().catch(() => []);
+    const existingRows = Array.isArray(existingJson) ? existingJson : [];
+    
+    const ids = new Set(existingRows.map((r) => r.id));
     for (const r of rows) ids.add(r.id);
     if (ids.size > limit)
       return json(
@@ -827,8 +833,28 @@ export default {
         );
       if (path === "/api/user-settings" && req.method === "POST")
         return handleSaveSettings(env, req, requireAuth());
-      if (path === "/api/health")
-        return json(env, req, { status: "ok", time: new Date().toISOString() });
+      if (path === "/api/health") {
+        let supabaseStatus = "unknown";
+        try {
+          // Perform a lightweight check to Supabase to verify it's awake and accepting connections
+          const res = await sb(env, "users?limit=1", { method: "HEAD" });
+          if (res.ok) {
+            supabaseStatus = "ok";
+          } else {
+            supabaseStatus = "error";
+          }
+        } catch (e) {
+          supabaseStatus = "error";
+        }
+        
+        const isHealthy = supabaseStatus === "ok";
+        return json(
+          env, 
+          req, 
+          { status: "ok", supabase: supabaseStatus, time: new Date().toISOString() }, 
+          isHealthy ? 200 : 503
+        );
+      }
 
       return json(env, req, { error: "Not found" }, 404);
     } catch (e) {
@@ -842,4 +868,3 @@ export default {
     }
   },
 };
-

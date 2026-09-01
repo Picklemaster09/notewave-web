@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { UserProfile, RecordingNote, SettingsConfig, UserTier } from "./types";
 import { 
-  isSupabaseEnabled, 
+  checkSupabaseHealth, 
   supabaseSaveSettings, 
   supabaseFetchNotes, 
   supabaseSaveNotes, 
@@ -80,6 +80,7 @@ const importInfoText: Record<string, string> = {
 export default function App() {
   const [activeTab, setActiveTab] = useState<"dictate" | "history" | "tasks" | "settings" | "ai_agent">("dictate");
   const [inputMode, setInputMode] = useState<"voice" | "upload">("voice");
+  const [isCloudOnline, setIsCloudOnline] = useState(true);
   
   // App settings state (defaults to Free Tier with RECORD action shortcut and English)
   const [settings, setSettings] = useState<SettingsConfig>({
@@ -268,6 +269,21 @@ export default function App() {
     };
   }, [isAuthenticated]);
   
+  // Periodically check Supabase connection health
+  useEffect(() => {
+    let active = true;
+    const checkConnection = async () => {
+      const healthy = await checkSupabaseHealth();
+      if (active) setIsCloudOnline(healthy);
+    };
+    checkConnection();
+    const interval = setInterval(checkConnection, 30000); // Check every 30 seconds
+    return () => {
+      active = false;
+      clearInterval(interval);
+    };
+  }, []);
+
   // Periodically refresh the Auth0 access token so that when the user returns
   // to the app after a long idle period (e.g., days), the token is already valid
   // and API calls don't fail. Auth0's getAccessTokenSilently() will use the
@@ -749,9 +765,9 @@ export default function App() {
                   <LogOut className="w-4 h-4" />
                 </button>
               </div>
-              <div className="p-2.5 bg-green-50/70 border border-green-150 rounded-xl flex items-center gap-2 text-[10.5px] text-green-700 font-sans font-bold leading-normal">
-                <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0" />
-                <span>☁️ {cloudSyncText[settings.language || "en"] || cloudSyncText.en}</span>
+              <div className={`p-2.5 ${isCloudOnline ? 'bg-green-50/70 border-green-150 text-green-700' : 'bg-amber-50/70 border-amber-150 text-amber-700'} border rounded-xl flex items-center gap-2 text-[10.5px] font-sans font-bold leading-normal`}>
+                <span className={`w-2 h-2 rounded-full ${isCloudOnline ? 'bg-green-500 animate-pulse' : 'bg-amber-500'} shrink-0`} />
+                <span>☁️ {isCloudOnline ? (cloudSyncText[settings.language || "en"] || cloudSyncText.en) : "Cloud Sync Offline"}</span>
               </div>
             </div>
 
@@ -960,6 +976,7 @@ export default function App() {
                     onUserChange={handleUserChange}
                     syncRecordingsToSupabase={syncRecordingsToSupabase}
                     localCount={notes.length}
+                    isCloudOnline={isCloudOnline}
                   />
                   <SettingsPanel
                     settings={settings}

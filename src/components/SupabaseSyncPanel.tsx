@@ -7,9 +7,10 @@ interface SupabaseSyncPanelProps {
   onUserChange: (user: any) => void;
   syncRecordingsToSupabase: (user: any) => Promise<void>;
   localCount: number;
+  isCloudOnline: boolean;
 }
 
-export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecordingsToSupabase, localCount }: SupabaseSyncPanelProps) {
+export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecordingsToSupabase, localCount, isCloudOnline }: SupabaseSyncPanelProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">("idle");
   const [authError, setAuthError] = useState<string | null>(null);
@@ -77,7 +78,7 @@ export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecor
               <span className="text-sm font-bold text-[#1C1C1E]">
                 {currentUser ? currentUser.displayName || "Cloud User" : "Offline Guest Session"}
               </span>
-              {isSupabaseEnabled ? (
+              {isCloudOnline ? (
                 <span className="text-[9px] font-mono font-bold uppercase bg-green-50 text-green-600 px-1.5 py-0.5 rounded-full border border-green-200">
                   SUPABASE CLOUD ACTIVE
                 </span>

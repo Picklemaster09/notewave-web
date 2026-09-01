@@ -14,6 +14,22 @@ export interface SupabaseUserSession {
 export const isSupabaseEnabled = true;
 
 /**
+ * Pings the /api/health endpoint which checks if Supabase is alive.
+ */
+export async function checkSupabaseHealth(): Promise<boolean> {
+  try {
+    const res = await fetch(apiUrl("/api/health"), {
+      method: "GET",
+      // Optional short timeout so the UI doesn't hang forever
+      signal: AbortSignal.timeout(5000)
+    });
+    return res.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
  * Builds the Authorization header for API calls. Authentication is handled
  * directly by Auth0 (SPA SDK); this attaches a fresh Auth0 access token so the
  * backend can identify the user. Falls back to any token on a legacy session

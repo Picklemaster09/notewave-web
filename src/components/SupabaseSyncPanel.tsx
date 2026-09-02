@@ -102,11 +102,11 @@ export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecor
             <>
               <button
                 id="manual-sync-btn"
-                disabled={isSyncing}
+                disabled={isSyncing || !isCloudOnline}
                 onClick={handleManualSync}
                 className="flex-1 sm:flex-none text-xs font-semibold px-3.5 py-2 rounded-xl bg-gray-50 hover:bg-gray-100 text-gray-800 transition-all border border-[#D1D1D6] disabled:opacity-50 cursor-pointer"
               >
-                {isSyncing ? "Syncing..." : syncStatus === "success" ? "Synced ✓" : "Sync Backup"}
+                {!isCloudOnline ? "Offline" : isSyncing ? "Syncing..." : syncStatus === "success" ? "Synced ✓" : "Sync Backup"}
               </button>
               <button
                 id="sign-out-btn"

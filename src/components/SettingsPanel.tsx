@@ -55,12 +55,21 @@ export default function SettingsPanel({
 
   // Local state for interactive settings fields, backed up in localStorage or merged with config
   const [displayName, setDisplayName] = useState(() => {
-    return localStorage.getItem("settings_display_name") || currentUser?.displayName || "Creator";
+    return currentUser?.displayName || localStorage.getItem("settings_display_name") || "Creator";
   });
   const [email, setEmail] = useState(() => {
-    return localStorage.getItem("settings_email") || currentUser?.email || "your@email.com";
+    return currentUser?.email || localStorage.getItem("settings_email") || "your@email.com";
   });
-  
+
+  useEffect(() => {
+    if (currentUser?.displayName) {
+      setDisplayName(currentUser.displayName);
+    }
+    if (currentUser?.email) {
+      setEmail(currentUser.email);
+    }
+  }, [currentUser]);
+
   // Custom interactive settings toggles (mock configurations backed by localStorage)
   const [pushNotifications, setPushNotifications] = useState(() => {
     return localStorage.getItem("settings_push_notifications") !== "false";

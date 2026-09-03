@@ -8,9 +8,10 @@ interface SupabaseSyncPanelProps {
   syncRecordingsToSupabase: (user: any) => Promise<void>;
   localCount: number;
   isCloudOnline: boolean;
+  onSignOut: () => void;
 }
 
-export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecordingsToSupabase, localCount, isCloudOnline }: SupabaseSyncPanelProps) {
+export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecordingsToSupabase, localCount, isCloudOnline, onSignOut }: SupabaseSyncPanelProps) {
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncStatus, setSyncStatus] = useState<"idle" | "success" | "error">("idle");
   const [authError, setAuthError] = useState<string | null>(null);
@@ -31,8 +32,7 @@ export default function SupabaseSyncPanel({ currentUser, onUserChange, syncRecor
   }, [currentUser]);
 
   const handleSignOut = () => {
-    onUserChange(null);
-    setSyncStatus("idle");
+    onSignOut();
   };
 
   const handleManualSync = async () => {

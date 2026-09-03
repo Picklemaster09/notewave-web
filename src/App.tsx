@@ -205,6 +205,10 @@ export default function App() {
   const handleSignOut = () => {
     registerTokenGetter(null);
     handleUserChange(null);
+    localStorage.removeItem("settings_display_name");
+    localStorage.removeItem("settings_avatar_img");
+    setLocalProfileName("");
+    setAvatarImg("");
     logout({ logoutParams: { returnTo: LANDING_HREF } });
   };
 
@@ -454,6 +458,64 @@ export default function App() {
       }
     }
   };
+
+  // --------------------------------------------------------
+  // Smart Background Polling (Production-Level Fetching)
+  // --------------------------------------------------------
+  useEffect(() => {
+    if (!currentUser) return;
+    let isActive = true;
+
+    const pullCloudUpdates = async () => {
+      try {
+        const cloudNotes = await supabaseFetchNotes(currentUser.uid);
+        if (!isActive) return;
+        
+        setNotes((prev) => {
+          const mergedMap = new Map<string, RecordingNote>();
+          
+          // Keep local state
+          prev.forEach((n) => mergedMap.set(n.id, n));
+          
+          // Merge with cloud state (so other devices' new notes show up)
+          cloudNotes.forEach((n) => mergedMap.set(n.id, {
+            ...n,
+            category: n.category || "ideas",
+            subTodos: Array.isArray(n.subTodos) ? n.subTodos : [],
+          }));
+
+          const mergedList = Array.from(mergedMap.values());
+          mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          
+          localStorage.setItem(LOCAL_STORAGE_NOTES_KEY, JSON.stringify(mergedList));
+          return mergedList;
+        });
+      } catch (err) {
+        console.warn("Background cloud fetch failed (non-fatal):", err);
+      }
+    };
+
+    // 1. Fetch immediately when window regains focus (e.g. switching tabs back to NoteWave)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") pullCloudUpdates();
+    };
+    const handleFocus = () => pullCloudUpdates();
+
+    window.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    // 2. Poll periodically (every 30 seconds)
+    const intervalId = setInterval(() => {
+      pullCloudUpdates();
+    }, 30000);
+
+    return () => {
+      isActive = false;
+      window.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      clearInterval(intervalId);
+    };
+  }, [currentUser]);
 
   // --------------------------------------------------------
   // Supabase Synchronizations Engine (Cloud Backup Database)
@@ -977,6 +1039,7 @@ export default function App() {
                     syncRecordingsToSupabase={syncRecordingsToSupabase}
                     localCount={notes.length}
                     isCloudOnline={isCloudOnline}
+                    onSignOut={handleSignOut}
                   />
                   <SettingsPanel
                     settings={settings}

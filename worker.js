@@ -241,7 +241,7 @@ async function geminiGenerate(env, parts, jsonMode, { retries = 2, baseDelayMs =
   }
   // Tag transient/overload failures so callers can fall back to OpenAI.
   const err = new Error(`Gemini ${lastStatus}: ${lastText.slice(0, 300)}`);
-  if (GEMINI_RETRYABLE.has(lastStatus) || lastStatus === 429) err.overloaded = true;
+  if (GEMINI_RETRYABLE.has(lastStatus)) err["overloaded"] = true;
   throw err;
 }
 
@@ -251,7 +251,7 @@ const canFallback = (env, e) => !!(e && e.overloaded && env.OPENAI_API_KEY);
 // situation surfaces to the client as "models unavailable".
 function openaiError(status, text) {
   const err = new Error(`OpenAI ${status}: ${String(text).slice(0, 300)}`);
-  if (status >= 500 || status === 429) err.overloaded = true;
+  if (status >= 500 || status === 429) err["overloaded"] = true;
   return err;
 }
 // Single-prompt text generation via gpt-4o-mini. jsonMode uses response_format;

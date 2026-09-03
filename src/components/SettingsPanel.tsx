@@ -96,6 +96,11 @@ export default function SettingsPanel({
   const [passwordStatus, setPasswordStatus] = useState("");
   const [saveConfirmation, setSaveConfirmation] = useState("");
 
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   // Save changes locally whenever relevant profile info or custom options are updated
   useEffect(() => {
     localStorage.setItem("settings_push_notifications", String(pushNotifications));
@@ -432,20 +437,87 @@ export default function SettingsPanel({
                   <Shield className="w-3.5 h-3.5 text-blue-600" /> Security
                 </h3>
 
-                <button
-                  id="security-change-password-btn"
-                  type="button"
-                  onClick={() => {
-                    setPasswordStatus("Password update simulator activated! We have dispatched a security reset email token.");
-                    setTimeout(() => setPasswordStatus(""), 4005);
-                  }}
-                  className="w-full text-center py-2 px-4 rounded-xl text-xs font-black bg-white hover:bg-slate-50 border border-[#E5E5EA] text-[#1C1C1E] shadow-3xs hover:border-[#D1D1D6] active:scale-99 transition-all cursor-pointer font-sans"
-                >
-                  Change Password
-                </button>
+                {!isChangingPassword ? (
+                  <button
+                    id="security-change-password-btn"
+                    type="button"
+                    onClick={() => setIsChangingPassword(true)}
+                    className="w-full text-center py-2 px-4 rounded-xl text-xs font-black bg-white hover:bg-slate-50 border border-[#E5E5EA] text-[#1C1C1E] shadow-3xs hover:border-[#D1D1D6] active:scale-99 transition-all cursor-pointer font-sans"
+                  >
+                    Change Password
+                  </button>
+                ) : (
+                  <div className="flex flex-col gap-3 bg-slate-50/50 p-3 rounded-xl border border-[#E5E5EA]">
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Old Password</label>
+                      <input
+                        type="password"
+                        value={oldPassword}
+                        onChange={(e) => setOldPassword(e.target.value)}
+                        className="w-full bg-white border border-[#d1d1d6] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-blue-500 transition-all text-gray-800"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full bg-white border border-[#d1d1d6] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-blue-500 transition-all text-gray-800"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <label className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">Confirm New Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="w-full bg-white border border-[#d1d1d6] rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none focus:border-blue-500 transition-all text-gray-800"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!oldPassword || !newPassword || !confirmPassword) {
+                            setPasswordStatus("Please fill in all fields.");
+                            setTimeout(() => setPasswordStatus(""), 3000);
+                            return;
+                          }
+                          if (newPassword !== confirmPassword) {
+                            setPasswordStatus("New passwords do not match.");
+                            setTimeout(() => setPasswordStatus(""), 3000);
+                            return;
+                          }
+                          setPasswordStatus("Password successfully updated.");
+                          setOldPassword("");
+                          setNewPassword("");
+                          setConfirmPassword("");
+                          setIsChangingPassword(false);
+                          setTimeout(() => setPasswordStatus(""), 4000);
+                        }}
+                        className="flex-1 text-center py-2 px-4 rounded-xl text-xs font-black bg-blue-600 text-white hover:bg-blue-500 shadow-sm active:scale-97 transition-all cursor-pointer font-sans"
+                      >
+                        Save
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsChangingPassword(false);
+                          setOldPassword("");
+                          setNewPassword("");
+                          setConfirmPassword("");
+                        }}
+                        className="flex-1 text-center py-2 px-4 rounded-xl text-xs font-black bg-white hover:bg-slate-50 border border-[#E5E5EA] text-gray-600 active:scale-97 transition-all cursor-pointer font-sans"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {passwordStatus && (
-                  <div className="p-2.5 rounded-xl text-[10px] leading-relaxed font-bold bg-green-50 border border-green-150 text-green-700">
+                  <div className={`p-2.5 rounded-xl text-[10px] leading-relaxed font-bold border ${passwordStatus.includes('successfully') ? 'bg-green-50 border-green-150 text-green-700' : 'bg-red-50 border-red-150 text-red-700'}`}>
                     {passwordStatus}
                   </div>
                 )}

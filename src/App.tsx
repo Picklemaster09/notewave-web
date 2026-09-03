@@ -207,8 +207,12 @@ export default function App() {
     handleUserChange(null);
     localStorage.removeItem("settings_display_name");
     localStorage.removeItem("settings_avatar_img");
+    localStorage.removeItem(LOCAL_STORAGE_NOTES_KEY);
+    localStorage.removeItem(LOCAL_STORAGE_SETTINGS_KEY);
+    localStorage.removeItem("notewave_is_pro_purchased");
     setLocalProfileName("");
     setAvatarImg("");
+    setNotes([]);
     logout({ logoutParams: { returnTo: LANDING_HREF } });
   };
 
@@ -219,6 +223,17 @@ export default function App() {
   // refresh token, so users stay signed in even after the access token expires.
   useEffect(() => {
     if (isAuthenticated && auth0User) {
+      // Prevent cross-contamination if a different user logs into the same browser
+      const lastUid = localStorage.getItem("last_logged_in_uid");
+      if (lastUid && lastUid !== auth0User.sub) {
+        console.warn("User switched. Wiping previous user's local cache to prevent data leaks.");
+        localStorage.removeItem(LOCAL_STORAGE_NOTES_KEY);
+        localStorage.removeItem(LOCAL_STORAGE_SETTINGS_KEY);
+        localStorage.removeItem("notewave_is_pro_purchased");
+        setNotes([]);
+      }
+      localStorage.setItem("last_logged_in_uid", auth0User.sub);
+
       // Register the token getter – this is called by the API layer before each
       // request to ensure a valid (non-expired) access token is used.
       registerTokenGetter(() => getAccessTokenSilently());

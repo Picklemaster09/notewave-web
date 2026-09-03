@@ -43,6 +43,7 @@ export default function AIAgentWorkspace({
   
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const isEs = language === "es";
 
@@ -110,6 +111,11 @@ export default function AIAgentWorkspace({
     setInputValue("");
     setIsProcessing(true);
 
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
     try {
       // Map message structures for API body
       const apiPayload = {
@@ -135,7 +141,8 @@ export default function AIAgentWorkspace({
       const response = await fetch(apiUrl("/api/ai-agent"), {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await getAuthHeaders()) },
-        body: JSON.stringify(apiPayload)
+        body: JSON.stringify(apiPayload),
+        signal: abortControllerRef.current?.signal
       });
 
       const data = await response.json();
@@ -170,6 +177,7 @@ export default function AIAgentWorkspace({
       fetchUsageDetails();
 
     } catch (err: any) {
+      if (err.name === 'AbortError') return;
       console.error("Chat error:", err);
       setErrorMessage(
         err.message || (isEs ? "Error al contactar al Agente de IA. Inténtalo de nuevo." : "Failed to retrieve answer from AI Agent. Reset/Verify tier keys.")
@@ -180,6 +188,9 @@ export default function AIAgentWorkspace({
   };
 
   const handleClearHistory = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
     setMessages([]);
     localStorage.removeItem("notewave_agent_chat");
   };
@@ -434,7 +445,7 @@ export default function AIAgentWorkspace({
       </div>
 
       {/* Suggestion Prompt Chips */}
-      {!inputValue && (
+      {messages.length === 0 && !inputValue && (
         <div className="flex flex-col gap-2">
           <span className="text-[9.5px] font-mono uppercase font-black tracking-wider text-gray-400 px-1">
             {isEs ? "Sugerencias de búsqueda rápida (RAG):" : "Quick suggestions:"}

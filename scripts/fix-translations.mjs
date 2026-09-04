@@ -94,17 +94,29 @@ async function processWeb() {
       console.log("Web locales not found at", webLocalesDir);
       return;
   }
+  
+  // 1. Fix English first
   const enPath = path.join(webLocalesDir, 'en.json');
-  const enContent = fs.readFileSync(enPath, 'utf8');
+  const rawEnContent = fs.readFileSync(enPath, 'utf8');
+  console.log(`Fixing en JSON...`);
+  const fixedEnContent = await fixTranslation(rawEnContent, rawEnContent, 'en', 'json');
+  if (fixedEnContent) {
+    fs.writeFileSync(enPath, fixedEnContent);
+    console.log(`  -> Saved en.json`);
+  }
 
-  const files = fs.readdirSync(webLocalesDir).filter(f => f.endsWith('.json'));
+  // 2. Read the newly fixed English to use as the base for the rest
+  const finalEnContent = fs.readFileSync(enPath, 'utf8');
+
+  // 3. Process the rest of the languages
+  const files = fs.readdirSync(webLocalesDir).filter(f => f.endsWith('.json') && f !== 'en.json');
   for (const file of files) {
     const targetPath = path.join(webLocalesDir, file);
     const targetContent = fs.readFileSync(targetPath, 'utf8');
     const lang = file.replace('.json', '');
     
     console.log(`Fixing ${lang} JSON...`);
-    const fixedContent = await fixTranslation(enContent, targetContent, lang, 'json');
+    const fixedContent = await fixTranslation(finalEnContent, targetContent, lang, 'json');
     if (fixedContent) {
       fs.writeFileSync(targetPath, fixedContent);
       console.log(`  -> Saved ${file}`);
@@ -118,17 +130,29 @@ async function processAndroid() {
     console.log("Android locales not found at", androidLocalesDir);
     return;
   }
+  
+  // 1. Fix English first
   const enPath = path.join(androidLocalesDir, 'en.ts');
-  const enContent = fs.readFileSync(enPath, 'utf8');
+  const rawEnContent = fs.readFileSync(enPath, 'utf8');
+  console.log(`Fixing en TS...`);
+  const fixedEnContent = await fixTranslation(rawEnContent, rawEnContent, 'en', 'ts');
+  if (fixedEnContent) {
+    fs.writeFileSync(enPath, fixedEnContent);
+    console.log(`  -> Saved en.ts`);
+  }
 
-  const files = fs.readdirSync(androidLocalesDir).filter(f => f.endsWith('.ts'));
+  // 2. Read the newly fixed English to use as the base for the rest
+  const finalEnContent = fs.readFileSync(enPath, 'utf8');
+
+  // 3. Process the rest of the languages
+  const files = fs.readdirSync(androidLocalesDir).filter(f => f.endsWith('.ts') && f !== 'en.ts');
   for (const file of files) {
     const targetPath = path.join(androidLocalesDir, file);
     const targetContent = fs.readFileSync(targetPath, 'utf8');
     const lang = file.replace('.ts', '');
     
     console.log(`Fixing ${lang} TS...`);
-    const fixedContent = await fixTranslation(enContent, targetContent, lang, 'ts');
+    const fixedContent = await fixTranslation(finalEnContent, targetContent, lang, 'ts');
     if (fixedContent) {
       fs.writeFileSync(targetPath, fixedContent);
       console.log(`  -> Saved ${file}`);

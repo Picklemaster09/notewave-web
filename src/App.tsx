@@ -431,13 +431,15 @@ export default function App() {
         const list = await supabaseFetchNotes(currentUser.uid);
         if (list.length > 0) {
           // Sync local state initially if cloud notes exist
-          const mergedMap = new Map<string, RecordingNote>();
-          list.forEach((n) => mergedMap.set(n.id, n));
-          notes.forEach((n) => mergedMap.set(n.id, n));
-          const mergedList = Array.from(mergedMap.values());
-          mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          setNotes(mergedList);
-          localStorage.setItem(LOCAL_STORAGE_NOTES_KEY, JSON.stringify(mergedList));
+          setNotes((prev) => {
+            const mergedMap = new Map<string, RecordingNote>();
+            list.forEach((n) => mergedMap.set(n.id, n));
+            prev.forEach((n) => mergedMap.set(n.id, n));
+            const mergedList = Array.from(mergedMap.values());
+            mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            localStorage.setItem(LOCAL_STORAGE_NOTES_KEY, JSON.stringify(mergedList));
+            return mergedList;
+          });
         }
       } catch (err) {
         console.error("Failed to fetch cloud profile settings:", err);
@@ -542,34 +544,41 @@ export default function App() {
 
     try {
       const cloudNotes = await supabaseFetchNotes(user.uid);
-      const mergedMap = new Map<string, RecordingNote>();
       
-      // Load cloud backups first
-      cloudNotes.forEach((n) => mergedMap.set(n.id, {
-        ...n,
-        category: n.category || "ideas",
-        subTodos: Array.isArray(n.subTodos) ? n.subTodos : [],
-      }));
-      
-      // Load/overwrite with current local list (any newly recorded dictations)
-      notes.forEach((n) => mergedMap.set(n.id, {
-        ...n,
-        category: n.category || "ideas",
-        subTodos: Array.isArray(n.subTodos) ? n.subTodos : [],
-      }));
+      setNotes((prevNotes) => {
+        const mergedMap = new Map<string, RecordingNote>();
+        
+        // Load cloud backups first
+        cloudNotes.forEach((n) => mergedMap.set(n.id, {
+          ...n,
+          category: n.category || "ideas",
+          subTodos: Array.isArray(n.subTodos) ? n.subTodos : [],
+        }));
+        
+        // Load/overwrite with current local list (any newly recorded dictations)
+        prevNotes.forEach((n) => mergedMap.set(n.id, {
+          ...n,
+          category: n.category || "ideas",
+          subTodos: Array.isArray(n.subTodos) ? n.subTodos : [],
+        }));
 
-      const mergedList = Array.from(mergedMap.values());
-      mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        const mergedList = Array.from(mergedMap.values());
+        mergedList.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      // Save complete merged cache locally
-      setNotes(mergedList);
-      localStorage.setItem(LOCAL_STORAGE_NOTES_KEY, JSON.stringify(mergedList));
+        // Save complete merged cache locally
+        localStorage.setItem(LOCAL_STORAGE_NOTES_KEY, JSON.stringify(mergedList));
+        
+        // Push back bulk backup
+        supabaseSaveNotes(user.uid, mergedList).then(() => {
+          console.log("Dual-sync backup synced seamlessly with Supabase cloud database!");
+        }).catch((err) => {
+          console.error("Failed cloud database sync replication:", err);
+        });
 
-      // Push back bulk backup
-      await supabaseSaveNotes(user.uid, mergedList);
-      console.log("Dual-sync backup synced seamlessly with Supabase cloud database!");
+        return mergedList;
+      });
     } catch (err) {
-      console.error("Failed cloud database sync replication:", err);
+      console.error("Failed to fetch from cloud before sync:", err);
     }
   };
 
